@@ -3,12 +3,11 @@ package graphql
 import (
 	"net/http"
 
-	// "encore.app/app" // Import app package to access Service
-	// "encore.app/graphql/generated"
+	"encore.app/app" // Import app package to access Service
+	"encore.app/graphql/generated"
 	"encore.dev"
 	"github.com/99designs/gqlgen/graphql/handler"
-	// "github.com/99designs/gqlgen/graphql/playground"
-	// "gorm.io/gorm"
+	"github.com/99designs/gqlgen/graphql/playground"
 )
 
 //go:generate go run github.com/99designs/gqlgen generate
@@ -17,26 +16,25 @@ import (
 type Service struct {
 	srv        *handler.Server
 	playground http.Handler
-	// db         *gorm.DB
 }
 
-// func initService() (*Service, error) {
-// 	// Initialize app.Service to get the db
-// 	appService, err := app.New() // Call constructor from app/app.go
-// 	if err != nil {
-// 		return nil, err
-// 	}
+func initService() (*Service, error) {
+	// Initialize app.Service to get the db
+	appService, err := app.New() // Call constructor from app/app.go
+	if err != nil {
+		return nil, err
+	}
 
-// 	// Use appService's db
-// 	db := appService.DB()
+	// Use appService's db
+	db := appService.DB()
 
-// 	// Create config with Resolver that uses db
-// 	cfg := generated.Config{Resolvers: &Resolver{db: db}}
-// 	srv := handler.NewDefaultServer(generated.NewExecutableSchema(cfg))
+	// Create config with Resolver that uses db
+	cfg := generated.Config{Resolvers: &Resolver{db: db}}
+	srv := handler.NewDefaultServer(generated.NewExecutableSchema(cfg))
 
-// 	pg := playground.Handler("GraphQL Playground", "/graphql")
-// 	return &Service{srv: srv, playground: pg, db: db}, nil
-// }
+	pg := playground.Handler("GraphQL Playground", "/graphql")
+	return &Service{srv: srv, playground: pg}, nil
+}
 
 //encore:api public raw path=/graphql
 func (s *Service) Query(w http.ResponseWriter, req *http.Request) {
