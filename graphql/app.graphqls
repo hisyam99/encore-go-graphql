@@ -1,0 +1,102 @@
+type Query {
+  users: [User!]!
+  user(id: ID!): User
+  projects: [Project!]!
+  project(id: ID!): Project
+  blogs: [Blog!]!
+  blog(id: ID!): Blog
+  resumes: [Resume!]!
+  resume(id: ID!): Resume
+}
+
+type Mutation {
+  createUser(input: CreateUserInput!): User!
+  updateUser(id: ID!, input: UpdateUserInput!): User!
+  deleteUser(id: ID!): Boolean!
+
+  createProject(input: CreateProjectInput!): Project!
+  updateProject(id: ID!, input: UpdateProjectInput!): Project!
+  deleteProject(id: ID!): Boolean!
+
+  createBlog(input: CreateBlogInput!): Blog!
+  updateBlog(id: ID!, input: UpdateBlogInput!): Blog!
+  deleteBlog(id: ID!): Boolean!
+
+  createResume(input: CreateResumeInput!): Resume!
+  updateResume(id: ID!, input: UpdateResumeInput!): Resume!
+  deleteResume(id: ID!): Boolean!
+}
+
+type User {
+  id: ID!
+  name: String!
+  email: String!
+  createdAt: String!
+  projects: [Project!]!
+}
+
+type Project {
+  id: ID!
+  title: String!
+  description: String!
+  userID: ID!
+  user: User
+}
+
+type Blog {
+  id: ID!
+  title: String!
+  content: String!
+  createdAt: String!
+}
+
+type Resume {
+  id: ID!
+  title: String!
+  description: String!
+  category: String!
+}
+
+input CreateUserInput {
+  name: String!
+  email: String!
+}
+
+input UpdateUserInput {
+  name: String
+  email: String
+}
+
+input CreateProjectInput {
+  title: String!
+  description: String!
+  userID: ID!
+}
+
+input UpdateProjectInput {
+  title: String
+  description: String
+  userID: ID
+}
+
+input CreateBlogInput {
+  title: String!
+  content: String!
+}
+
+input UpdateBlogInput {
+  title: String
+  content: String
+}
+
+input CreateResumeInput {
+  title: String!
+  description: String!
+  category: String!
+}
+
+input UpdateResumeInput {
+  title: String
+  description: String
+  category: String
+}

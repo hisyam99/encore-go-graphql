@@ -1,35 +1,43 @@
-// Service graphql exposes a GraphQL API.
 package graphql
 
 import (
 	"net/http"
 
+	"encore.app/app" // Import app package to access Service
 	"encore.app/graphql/generated"
+	"encore.dev"
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/playground"
+	"gorm.io/gorm"
 )
 
 //go:generate go run github.com/99designs/gqlgen generate
 
-// This is a service struct, learn more: https://encore.dev/docs/go/primitives/service-structs
-//
 //encore:service
 type Service struct {
 	srv        *handler.Server
 	playground http.Handler
+	db         *gorm.DB
 }
 
-// initService is automatically called by Encore when the service starts up.
 func initService() (*Service, error) {
-	srv := handler.NewDefaultServer(generated.NewExecutableSchema(generated.Config{Resolvers: &Resolver{}}))
+	// Initialize app.Service to get the db
+	appService, err := app.New() // Call constructor from app/app.go
+	if err != nil {
+		return nil, err
+	}
+
+	// Use appService's db
+	db := appService.DB()
+
+	// Create config with Resolver that uses db
+	cfg := generated.Config{Resolvers: &Resolver{db: db}}
+	srv := handler.NewDefaultServer(generated.NewExecutableSchema(cfg))
+
 	pg := playground.Handler("GraphQL Playground", "/graphql")
-	return &Service{srv, pg}, nil
+	return &Service{srv: srv, playground: pg, db: db}, nil
 }
 
-// Exposes the graphql API using a raw endpoint.
-//
-// Learn more: https://encore.dev/docs/go/primitives/raw-endpoints
-//
 //encore:api public raw path=/graphql
 func (s *Service) Query(w http.ResponseWriter, req *http.Request) {
 	s.srv.ServeHTTP(w, req)
@@ -37,5 +45,9 @@ func (s *Service) Query(w http.ResponseWriter, req *http.Request) {
 
 //encore:api public raw path=/graphql/playground
 func (s *Service) Playground(w http.ResponseWriter, req *http.Request) {
+	if encore.Meta().Environment.Type == encore.EnvProduction {
+		http.Error(w, "Playground disabled", http.StatusNotFound)
+		return
+	}
 	s.playground.ServeHTTP(w, req)
 }
