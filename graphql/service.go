@@ -1,10 +1,12 @@
 package graphql
 
 import (
+	"context"
 	"net/http"
 
 	"encore.app/app" // Import app package to access Service
 	"encore.app/app/services"
+	"encore.app/app/utils"
 	"encore.app/graphql/generated"
 	"encore.dev"
 	"github.com/99designs/gqlgen/graphql/handler"
@@ -42,6 +44,12 @@ func initService() (*Service, error) {
 
 //encore:api public raw path=/graphql
 func (s *Service) Query(w http.ResponseWriter, req *http.Request) {
+	// Extract Authorization header and put it in context
+	authHeader := req.Header.Get("Authorization")
+	ctx := context.WithValue(req.Context(), utils.AuthHeaderKey, authHeader)
+	req = req.WithContext(ctx)
+
+	// Serve GraphQL with the updated context
 	s.srv.ServeHTTP(w, req)
 }
 

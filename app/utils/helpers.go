@@ -6,9 +6,22 @@ import (
 	"time"
 )
 
+// contextKey is a private key for context that only this package can access
+type contextKey struct {
+	name string
+}
+
+// AuthHeaderKey is the context key for authorization header
+var AuthHeaderKey = &contextKey{"auth-header"}
+
 // GetAuthHeaderFromContext extracts authorization header from GraphQL context
 func GetAuthHeaderFromContext(ctx context.Context) string {
-	// Try to get from direct context value
+	// Get auth header from context (set by GraphQL service)
+	if authHeader, ok := ctx.Value(AuthHeaderKey).(string); ok {
+		return authHeader
+	}
+
+	// Fallback: Try to get from direct context value (legacy support)
 	if headers, ok := ctx.Value("headers").(map[string]string); ok {
 		if auth := headers["authorization"]; auth != "" {
 			return auth
