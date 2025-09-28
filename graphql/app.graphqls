@@ -1,3 +1,10 @@
+enum UserRole {
+  ADMIN
+  EDITOR
+  VIEWER
+  GUEST
+}
+
 enum BlogStatus {
   DRAFT
   PUBLISHED
@@ -15,7 +22,23 @@ type PaginationInfo {
   totalPages: Int!
 }
 
+# Auth Types
+type LoginResponse {
+  user: User!
+  tokens: TokenPair!
+}
+
+type TokenPair {
+  accessToken: String!
+  refreshToken: String!
+  expiresIn: Int!
+  tokenType: String!
+}
+
 type Query {
+  # Auth queries
+  me: User
+
   # User queries
   users(page: Int = 1, pageSize: Int = 10, sortBy: String = "createdAt", sortDirection: SortDirection = DESC): UserConnection!
   user(id: ID!): User
@@ -43,6 +66,14 @@ type Query {
 }
 
 type Mutation {
+  # Auth mutations
+  login(input: LoginInput!): LoginResponse!
+  register(input: RegisterInput!): LoginResponse!
+  refreshToken(refreshToken: String!): TokenPair!
+  changePassword(input: ChangePasswordInput!): Boolean!
+  updateUserRole(userId: ID!, role: UserRole!): User!
+  deactivateUser(userId: ID!): Boolean!
+
   # User mutations
   createUser(input: CreateUserInput!): User!
   updateUser(id: ID!, input: UpdateUserInput!): User!
@@ -73,6 +104,9 @@ type User {
   id: ID!
   name: String!
   email: String!
+  role: UserRole!
+  isActive: Boolean!
+  lastLogin: String
   createdAt: String!
   updatedAt: String!
   projects: [Project!]!
@@ -153,11 +187,14 @@ type BlogConnection {
 input CreateUserInput {
   name: String!
   email: String!
+  role: UserRole
 }
 
 input UpdateUserInput {
   name: String
   email: String
+  role: UserRole
+  isActive: Boolean
 }
 
 input CreateCategoryInput {
@@ -216,4 +253,22 @@ input UpdateBlogInput {
   status: BlogStatus
   tags: [String!]
   metaDescription: String
+}
+
+# Auth Input Types
+input LoginInput {
+  email: String!
+  password: String!
+}
+
+input RegisterInput {
+  name: String!
+  email: String!
+  password: String!
+  role: UserRole
+}
+
+input ChangePasswordInput {
+  oldPassword: String!
+  newPassword: String!
 }

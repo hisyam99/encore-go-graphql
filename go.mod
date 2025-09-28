@@ -5,6 +5,7 @@ go 1.24.6
 require (
 	encore.dev v1.48.13
 	github.com/99designs/gqlgen v0.17.81
+	github.com/golang-jwt/jwt/v5 v5.2.0
 	github.com/vektah/gqlparser/v2 v2.5.30
 )
 
@@ -86,7 +87,7 @@ require (
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/urfave/cli/v2 v2.27.7 // indirect
 	github.com/xrash/smetrics v0.0.0-20240521201337-686a1a2994c1 // indirect
-	golang.org/x/crypto v0.42.0 // indirect
+	golang.org/x/crypto v0.42.0
 	golang.org/x/mod v0.28.0 // indirect
 	golang.org/x/sync v0.17.0 // indirect
 	golang.org/x/sys v0.36.0 // indirect

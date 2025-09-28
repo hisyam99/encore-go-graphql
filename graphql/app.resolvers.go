@@ -7,11 +7,14 @@ package graphql
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strconv"
 	"time"
 
 	"encore.app/app"
+	"encore.app/app/middleware"
 	"encore.app/app/repositories"
+	"encore.app/app/services"
 	"encore.app/app/utils"
 	"encore.app/graphql/generated"
 	"encore.app/graphql/model"
@@ -58,6 +61,181 @@ func (r *categoryResolver) UpdatedAt(ctx context.Context, obj *app.Category) (st
 	return utils.FormatTime(obj.UpdatedAt), nil
 }
 
+// Login is the resolver for the login field.
+func (r *mutationResolver) Login(ctx context.Context, input model.LoginInput) (*model.LoginResponse, error) {
+	authService := r.services.Auth
+	if authService == nil {
+		return nil, errors.New("auth service not available")
+	}
+
+	loginReq := &services.LoginRequest{
+		Email:    input.Email,
+		Password: input.Password,
+	}
+
+	result, err := authService.Login(ctx, loginReq)
+	if err != nil {
+		return nil, err
+	}
+
+	return &model.LoginResponse{
+		User: result.User,
+		Tokens: &model.TokenPair{
+			AccessToken:  result.Tokens.AccessToken,
+			RefreshToken: result.Tokens.RefreshToken,
+			ExpiresIn:    int(result.Tokens.ExpiresIn),
+			TokenType:    result.Tokens.TokenType,
+		},
+	}, nil
+}
+
+// Register is the resolver for the register field.
+func (r *mutationResolver) Register(ctx context.Context, input model.RegisterInput) (*model.LoginResponse, error) {
+	authService := r.services.Auth
+	if authService == nil {
+		return nil, errors.New("auth service not available")
+	}
+
+	var role app.UserRole
+	if input.Role != nil {
+		role = *input.Role
+	}
+
+	registerReq := &services.RegisterRequest{
+		Name:     input.Name,
+		Email:    input.Email,
+		Password: input.Password,
+		Role:     role,
+	}
+
+	result, err := authService.Register(ctx, registerReq)
+	if err != nil {
+		return nil, err
+	}
+
+	return &model.LoginResponse{
+		User: result.User,
+		Tokens: &model.TokenPair{
+			AccessToken:  result.Tokens.AccessToken,
+			RefreshToken: result.Tokens.RefreshToken,
+			ExpiresIn:    int(result.Tokens.ExpiresIn),
+			TokenType:    result.Tokens.TokenType,
+		},
+	}, nil
+}
+
+// RefreshToken is the resolver for the refreshToken field.
+func (r *mutationResolver) RefreshToken(ctx context.Context, refreshToken string) (*model.TokenPair, error) {
+	authService := r.services.Auth
+	if authService == nil {
+		return nil, errors.New("auth service not available")
+	}
+
+	tokens, err := authService.RefreshToken(ctx, refreshToken)
+	if err != nil {
+		return nil, err
+	}
+
+	return &model.TokenPair{
+		AccessToken:  tokens.AccessToken,
+		RefreshToken: tokens.RefreshToken,
+		ExpiresIn:    int(tokens.ExpiresIn),
+		TokenType:    tokens.TokenType,
+	}, nil
+}
+
+// ChangePassword is the resolver for the changePassword field.
+func (r *mutationResolver) ChangePassword(ctx context.Context, input model.ChangePasswordInput) (bool, error) {
+	// Get auth token from headers
+	authHeader := utils.GetAuthHeaderFromContext(ctx)
+	claims, err := middleware.RequireAuth(ctx, authHeader)
+	if err != nil {
+		return false, err
+	}
+
+	authService := r.services.Auth
+	if authService == nil {
+		return false, errors.New("auth service not available")
+	}
+
+	err = authService.ChangePassword(ctx, claims.UserID, input.OldPassword, input.NewPassword)
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+
+// UpdateUserRole is the resolver for the updateUserRole field.
+func (r *mutationResolver) UpdateUserRole(ctx context.Context, userID string, role app.UserRole) (*app.User, error) {
+	// Get auth token from headers
+	authHeader := utils.GetAuthHeaderFromContext(ctx)
+	claims, err := middleware.RequireAuth(ctx, authHeader)
+	if err != nil {
+		return nil, err
+	}
+
+	// Require admin role
+	if err := middleware.RequireRole(claims, app.UserRoleAdmin); err != nil {
+		return nil, err
+	}
+
+	id, err := utils.StringToUint(userID)
+	if err != nil {
+		return nil, errors.New("invalid user ID")
+	}
+
+	authService := r.services.Auth
+	if authService == nil {
+		return nil, errors.New("auth service not available")
+	}
+
+	err = authService.UpdateUserRole(ctx, id, role)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get updated user
+	updatedUser, err := authService.GetUserByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	return updatedUser, nil
+}
+
+// DeactivateUser is the resolver for the deactivateUser field.
+func (r *mutationResolver) DeactivateUser(ctx context.Context, userID string) (bool, error) {
+	// Get auth token from headers
+	authHeader := utils.GetAuthHeaderFromContext(ctx)
+	claims, err := middleware.RequireAuth(ctx, authHeader)
+	if err != nil {
+		return false, err
+	}
+
+	// Require admin role
+	if err := middleware.RequireRole(claims, app.UserRoleAdmin); err != nil {
+		return false, err
+	}
+
+	id, err := utils.StringToUint(userID)
+	if err != nil {
+		return false, errors.New("invalid user ID")
+	}
+
+	authService := r.services.Auth
+	if authService == nil {
+		return false, errors.New("auth service not available")
+	}
+
+	err = authService.DeactivateUser(ctx, id)
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+
 // CreateUser is the resolver for the createUser field.
 func (r *mutationResolver) CreateUser(ctx context.Context, input model.CreateUserInput) (*app.User, error) {
 	user, err := r.services.User.CreateUser(ctx, input.Name, input.Email)
@@ -95,6 +273,18 @@ func (r *mutationResolver) DeleteUser(ctx context.Context, id string) (bool, err
 
 // CreateCategory is the resolver for the createCategory field.
 func (r *mutationResolver) CreateCategory(ctx context.Context, input model.CreateCategoryInput) (*app.Category, error) {
+	// Get auth token from headers
+	authHeader := utils.GetAuthHeaderFromContext(ctx)
+	claims, err := middleware.RequireAuth(ctx, authHeader)
+	if err != nil {
+		return nil, err
+	}
+
+	// Require admin role for category management
+	if err := middleware.RequireRole(claims, app.UserRoleAdmin); err != nil {
+		return nil, err
+	}
+
 	description := ""
 	if input.Description != nil {
 		description = *input.Description
@@ -108,6 +298,18 @@ func (r *mutationResolver) CreateCategory(ctx context.Context, input model.Creat
 
 // UpdateCategory is the resolver for the updateCategory field.
 func (r *mutationResolver) UpdateCategory(ctx context.Context, id string, input model.UpdateCategoryInput) (*app.Category, error) {
+	// Get auth token from headers
+	authHeader := utils.GetAuthHeaderFromContext(ctx)
+	claims, err := middleware.RequireAuth(ctx, authHeader)
+	if err != nil {
+		return nil, err
+	}
+
+	// Require admin role for category management
+	if err := middleware.RequireRole(claims, app.UserRoleAdmin); err != nil {
+		return nil, err
+	}
+
 	categoryID, err := strconv.ParseUint(id, 10, 32)
 	if err != nil {
 		return nil, errors.New("invalid category ID")
@@ -122,6 +324,18 @@ func (r *mutationResolver) UpdateCategory(ctx context.Context, id string, input 
 
 // DeleteCategory is the resolver for the deleteCategory field.
 func (r *mutationResolver) DeleteCategory(ctx context.Context, id string) (bool, error) {
+	// Get auth token from headers
+	authHeader := utils.GetAuthHeaderFromContext(ctx)
+	claims, err := middleware.RequireAuth(ctx, authHeader)
+	if err != nil {
+		return false, err
+	}
+
+	// Require admin role for category management
+	if err := middleware.RequireRole(claims, app.UserRoleAdmin); err != nil {
+		return false, err
+	}
+
 	categoryID, err := strconv.ParseUint(id, 10, 32)
 	if err != nil {
 		return false, errors.New("invalid category ID")
@@ -198,13 +412,35 @@ func (r *mutationResolver) DeleteResumeContent(ctx context.Context, id string) (
 
 // CreateProject is the resolver for the createProject field.
 func (r *mutationResolver) CreateProject(ctx context.Context, input model.CreateProjectInput) (*app.Project, error) {
+	// Get auth token from headers
+	authHeader := utils.GetAuthHeaderFromContext(ctx)
+	claims, err := middleware.RequireAuth(ctx, authHeader)
+	if err != nil {
+		return nil, err
+	}
+
+	// Require at least EDITOR role
+	if err := middleware.RequireRole(claims, app.UserRoleEditor); err != nil {
+		return nil, err
+	}
+
+	// Use authenticated user's ID if not specified or not admin
 	var userID *uint
 	if input.UserID != nil {
 		parsed, err := utils.ParseID(*input.UserID)
 		if err != nil {
 			return nil, err
 		}
+		
+		// Only admin can create projects for other users
+		if claims.Role != app.UserRoleAdmin && parsed != claims.UserID {
+			return nil, errors.New("insufficient permissions to create project for another user")
+		}
+		
 		userID = &parsed
+	} else {
+		// Default to current user
+		userID = &claims.UserID
 	}
 
 	description := ""
@@ -256,14 +492,60 @@ func (r *mutationResolver) DeleteProject(ctx context.Context, id string) (bool, 
 
 // CreateBlog is the resolver for the createBlog field.
 func (r *mutationResolver) CreateBlog(ctx context.Context, input model.CreateBlogInput) (*app.Blog, error) {
-	blog := &app.Blog{
-		Title:     input.Title,
-		Content:   input.Content,
-		CreatedAt: time.Now(),
-	}
-	if err := r.db.Create(blog).Error; err != nil {
+	// Get auth token from headers
+	authHeader := utils.GetAuthHeaderFromContext(ctx)
+	claims, err := middleware.RequireAuth(ctx, authHeader)
+	if err != nil {
 		return nil, err
 	}
+
+	// Require at least EDITOR role
+	if err := middleware.RequireRole(claims, app.UserRoleEditor); err != nil {
+		return nil, err
+	}
+
+	// Use authenticated user as author if not specified
+	author := ""
+	if input.Author != nil {
+		author = *input.Author
+	} else {
+		// Get current user info
+		authService := r.services.Auth
+		if authService != nil {
+			user, err := authService.GetCurrentUser(ctx, claims.UserID)
+			if err == nil {
+				author = user.Name
+			}
+		}
+	}
+
+	// Set default status if not provided
+	status := app.BlogStatusDraft
+	if input.Status != nil {
+		status = *input.Status
+	}
+
+	// Extract other fields
+	summary := ""
+	if input.Summary != nil {
+		summary = *input.Summary
+	}
+
+	metaDescription := ""
+	if input.MetaDescription != nil {
+		metaDescription = *input.MetaDescription
+	}
+
+	tags := []string{}
+	if input.Tags != nil {
+		tags = input.Tags
+	}
+
+	blog, err := r.services.Blog.CreateBlog(ctx, input.Title, input.Content, summary, input.Slug, author, metaDescription, status, tags)
+	if err != nil {
+		return nil, err
+	}
+
 	return blog, nil
 }
 
@@ -323,6 +605,28 @@ func (r *projectResolver) CreatedAt(ctx context.Context, obj *app.Project) (stri
 // UpdatedAt is the resolver for the updatedAt field.
 func (r *projectResolver) UpdatedAt(ctx context.Context, obj *app.Project) (string, error) {
 	return utils.FormatTime(obj.UpdatedAt), nil
+}
+
+// Me is the resolver for the me field.
+func (r *queryResolver) Me(ctx context.Context) (*app.User, error) {
+	// Get auth token from headers
+	authHeader := utils.GetAuthHeaderFromContext(ctx)
+	claims, err := middleware.RequireAuth(ctx, authHeader)
+	if err != nil {
+		return nil, err
+	}
+
+	authService := r.services.Auth
+	if authService == nil {
+		return nil, errors.New("auth service not available")
+	}
+
+	user, err := authService.GetCurrentUser(ctx, claims.UserID)
+	if err != nil {
+		return nil, err
+	}
+
+	return user, nil
 }
 
 // Users is the resolver for the users field.
@@ -803,6 +1107,11 @@ func (r *resumeContentResolver) UpdatedAt(ctx context.Context, obj *app.ResumeCo
 // ID is the resolver for the id field.
 func (r *userResolver) ID(ctx context.Context, obj *app.User) (string, error) {
 	return strconv.FormatUint(uint64(obj.ID), 10), nil
+}
+
+// LastLogin is the resolver for the lastLogin field.
+func (r *userResolver) LastLogin(ctx context.Context, obj *app.User) (*string, error) {
+	panic(fmt.Errorf("not implemented: LastLogin - lastLogin"))
 }
 
 // CreatedAt is the resolver for the createdAt field.

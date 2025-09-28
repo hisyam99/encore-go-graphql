@@ -7,6 +7,7 @@ import (
 
 // Services contains all application services
 type Services struct {
+	Auth          *AuthService
 	User          *UserService
 	Category      *CategoryService
 	ResumeContent *ResumeContentService
@@ -24,6 +25,7 @@ func NewServices(db *gorm.DB) *Services {
 	blogRepo := repositories.NewBlogRepository(db)
 
 	// Initialize services
+	authService := NewAuthService(userRepo)
 	userService := NewUserService(userRepo)
 	categoryService := NewCategoryService(categoryRepo)
 	resumeContentService := NewResumeContentService(resumeContentRepo, categoryRepo)
@@ -31,6 +33,7 @@ func NewServices(db *gorm.DB) *Services {
 	blogService := NewBlogService(blogRepo)
 
 	return &Services{
+		Auth:          authService,
 		User:          userService,
 		Category:      categoryService,
 		ResumeContent: resumeContentService,

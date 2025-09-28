@@ -21,6 +21,11 @@ type CategoryConnection struct {
 	Pagination *PaginationInfo `json:"pagination"`
 }
 
+type ChangePasswordInput struct {
+	OldPassword string `json:"oldPassword"`
+	NewPassword string `json:"newPassword"`
+}
+
 type CreateBlogInput struct {
 	Title           string          `json:"title"`
 	Content         string          `json:"content"`
@@ -51,8 +56,19 @@ type CreateResumeContentInput struct {
 }
 
 type CreateUserInput struct {
-	Name  string `json:"name"`
-	Email string `json:"email"`
+	Name  string        `json:"name"`
+	Email string        `json:"email"`
+	Role  *app.UserRole `json:"role,omitempty"`
+}
+
+type LoginInput struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+type LoginResponse struct {
+	User   *app.User  `json:"user"`
+	Tokens *TokenPair `json:"tokens"`
 }
 
 type Mutation struct {
@@ -73,9 +89,23 @@ type ProjectConnection struct {
 type Query struct {
 }
 
+type RegisterInput struct {
+	Name     string        `json:"name"`
+	Email    string        `json:"email"`
+	Password string        `json:"password"`
+	Role     *app.UserRole `json:"role,omitempty"`
+}
+
 type ResumeContentConnection struct {
 	Data       []*app.ResumeContent `json:"data"`
 	Pagination *PaginationInfo      `json:"pagination"`
+}
+
+type TokenPair struct {
+	AccessToken  string `json:"accessToken"`
+	RefreshToken string `json:"refreshToken"`
+	ExpiresIn    int    `json:"expiresIn"`
+	TokenType    string `json:"tokenType"`
 }
 
 type UpdateBlogInput struct {
@@ -108,8 +138,10 @@ type UpdateResumeContentInput struct {
 }
 
 type UpdateUserInput struct {
-	Name  *string `json:"name,omitempty"`
-	Email *string `json:"email,omitempty"`
+	Name     *string       `json:"name,omitempty"`
+	Email    *string       `json:"email,omitempty"`
+	Role     *app.UserRole `json:"role,omitempty"`
+	IsActive *bool         `json:"isActive,omitempty"`
 }
 
 type UserConnection struct {

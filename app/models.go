@@ -6,8 +6,37 @@ import (
 	"errors"
 	"time"
 
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
+
+// UserRole represents user roles in the system
+type UserRole string
+
+const (
+	UserRoleAdmin  UserRole = "ADMIN"
+	UserRoleEditor UserRole = "EDITOR"
+	UserRoleViewer UserRole = "VIEWER"
+	UserRoleGuest  UserRole = "GUEST"
+)
+
+// Scan implements the Scanner interface for database reads
+func (ur *UserRole) Scan(value interface{}) error {
+	if value == nil {
+		*ur = UserRoleViewer
+		return nil
+	}
+	if s, ok := value.(string); ok {
+		*ur = UserRole(s)
+		return nil
+	}
+	return errors.New("cannot scan UserRole")
+}
+
+// Value implements the Valuer interface for database writes
+func (ur UserRole) Value() (driver.Value, error) {
+	return string(ur), nil
+}
 
 // BlogStatus represents the status of a blog post
 type BlogStatus string
@@ -67,12 +96,66 @@ type User struct {
 	ID        uint           `gorm:"primaryKey" json:"id"`
 	Name      string         `gorm:"not null;size:255" json:"name"`
 	Email     string         `gorm:"uniqueIndex;not null;size:255" json:"email"`
+	Password  string         `gorm:"not null;size:255" json:"-"` // Hidden from JSON
+	Role      UserRole       `gorm:"not null;default:'VIEWER';type:varchar(20)" json:"role"`
+	IsActive  bool           `gorm:"not null;default:true" json:"isActive"`
+	LastLogin *time.Time     `json:"lastLogin"`
 	CreatedAt time.Time      `json:"createdAt"`
 	UpdatedAt time.Time      `json:"updatedAt"`
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
 
 	// Relationships
 	Projects []Project `json:"projects,omitempty"`
+}
+
+// BeforeCreate hash password before creating user
+func (u *User) BeforeCreate(tx *gorm.DB) error {
+	if u.Password != "" {
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)
+		if err != nil {
+			return err
+		}
+		u.Password = string(hashedPassword)
+	}
+	return nil
+}
+
+// BeforeUpdate hash password before updating user if password changed
+func (u *User) BeforeUpdate(tx *gorm.DB) error {
+	if tx.Statement.Changed("Password") && u.Password != "" {
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)
+		if err != nil {
+			return err
+		}
+		u.Password = string(hashedPassword)
+	}
+	return nil
+}
+
+// CheckPassword verifies password
+func (u *User) CheckPassword(password string) bool {
+	err := bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(password))
+	return err == nil
+}
+
+// HasRole checks if user has specific role
+func (u *User) HasRole(role UserRole) bool {
+	return u.Role == role
+}
+
+// HasPermission checks if user has permission based on role hierarchy
+func (u *User) HasPermission(requiredRole UserRole) bool {
+	roleHierarchy := map[UserRole]int{
+		UserRoleGuest:  0,
+		UserRoleViewer: 1,
+		UserRoleEditor: 2,
+		UserRoleAdmin:  3,
+	}
+
+	userLevel := roleHierarchy[u.Role]
+	requiredLevel := roleHierarchy[requiredRole]
+
+	return userLevel >= requiredLevel
 }
 
 // Category represents a category for resume content
