@@ -27,8 +27,8 @@ func RequireAuth(ctx context.Context, token string) (*auth.Claims, error) {
 	}
 
 	// Remove "Bearer " prefix if present
-	if strings.HasPrefix(token, "Bearer ") {
-		token = strings.TrimPrefix(token, "Bearer ")
+	if after, ok := strings.CutPrefix(token, "Bearer "); ok {
+		token = after
 	}
 
 	// Validate token
