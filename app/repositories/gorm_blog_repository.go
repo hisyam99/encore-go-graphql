@@ -62,7 +62,7 @@ func (r *gormBlogRepository) List(ctx context.Context, params PaginationParams) 
 	// Apply pagination
 	offset := (params.Page - 1) * params.PageSize
 	if params.SortBy != "" {
-		order := params.SortBy
+		order := convertToSnakeCase(params.SortBy)
 		if params.SortDesc {
 			order += " DESC"
 		}
@@ -104,7 +104,7 @@ func (r *gormBlogRepository) ListByStatus(ctx context.Context, status app.BlogSt
 	// Apply pagination
 	offset := (params.Page - 1) * params.PageSize
 	if params.SortBy != "" {
-		order := params.SortBy
+		order := convertToSnakeCase(params.SortBy)
 		if params.SortDesc {
 			order += " DESC"
 		}

@@ -1,0 +1,401 @@
+{
+  "_type": "export",
+  "__export_format": 4,
+  "__export_date": "2025-09-28T10:00:00.000Z",
+  "__export_source": "insomnia.desktop.app:v2023.5.8",
+  "resources": [
+    {
+      "_id": "wrk_portfolio_graphql",
+      "_type": "workspace",
+      "name": "Portfolio GraphQL API",
+      "description": "Complete GraphQL API collection for Portfolio Backend"
+    },
+    {
+      "_id": "env_base",
+      "_type": "environment",
+      "name": "Base Environment",
+      "data": {
+        "base_url": "http://localhost:4001",
+        "graphql_endpoint": "{{ _.base_url }}/graphql"
+      }
+    },
+    {
+      "_id": "req_user_queries",
+      "_type": "request_group",
+      "name": "👤 User Queries",
+      "parentId": "wrk_portfolio_graphql"
+    },
+    {
+      "_id": "req_get_users",
+      "_type": "request",
+      "parentId": "req_user_queries",
+      "name": "Get All Users",
+      "method": "POST",
+      "url": "{{ _.graphql_endpoint }}",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"query\": \"query GetUsers($page: Int, $pageSize: Int, $sortBy: String, $sortDirection: SortDirection) {\\n  users(page: $page, pageSize: $pageSize, sortBy: $sortBy, sortDirection: $sortDirection) {\\n    data {\\n      id\\n      name\\n      email\\n      createdAt\\n      updatedAt\\n      projects {\\n        id\\n        title\\n        description\\n      }\\n    }\\n    pagination {\\n      page\\n      pageSize\\n      total\\n      totalPages\\n    }\\n  }\\n}\",\n  \"variables\": {\n    \"page\": 1,\n    \"pageSize\": 10,\n    \"sortBy\": \"createdAt\",\n    \"sortDirection\": \"DESC\"\n  }\n}"
+      }
+    },
+    {
+      "_id": "req_get_user",
+      "_type": "request",
+      "parentId": "req_user_queries",
+      "name": "Get User by ID",
+      "method": "POST",
+      "url": "{{ _.graphql_endpoint }}",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"query\": \"query GetUser($id: ID!) {\\n  user(id: $id) {\\n    id\\n    name\\n    email\\n    createdAt\\n    updatedAt\\n    projects {\\n      id\\n      title\\n      description\\n      createdAt\\n      updatedAt\\n    }\\n  }\\n}\",\n  \"variables\": {\n    \"id\": \"1\"\n  }\n}"
+      }
+    },
+    {
+      "_id": "req_user_mutations",
+      "_type": "request_group",
+      "name": "👤 User Mutations",
+      "parentId": "wrk_portfolio_graphql"
+    },
+    {
+      "_id": "req_create_user",
+      "_type": "request",
+      "parentId": "req_user_mutations",
+      "name": "Create User",
+      "method": "POST",
+      "url": "{{ _.graphql_endpoint }}",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"query\": \"mutation CreateUser($input: CreateUserInput!) {\\n  createUser(input: $input) {\\n    id\\n    name\\n    email\\n    createdAt\\n    updatedAt\\n  }\\n}\",\n  \"variables\": {\n    \"input\": {\n      \"name\": \"John Doe\",\n      \"email\": \"john.doe@example.com\"\n    }\n  }\n}"
+      }
+    },
+    {
+      "_id": "req_update_user",
+      "_type": "request",
+      "parentId": "req_user_mutations",
+      "name": "Update User",
+      "method": "POST",
+      "url": "{{ _.graphql_endpoint }}",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"query\": \"mutation UpdateUser($id: ID!, $input: UpdateUserInput!) {\\n  updateUser(id: $id, input: $input) {\\n    id\\n    name\\n    email\\n    createdAt\\n    updatedAt\\n  }\\n}\",\n  \"variables\": {\n    \"id\": \"1\",\n    \"input\": {\n      \"name\": \"John Smith\",\n      \"email\": \"john.smith@example.com\"\n    }\n  }\n}"
+      }
+    },
+    {
+      "_id": "req_delete_user",
+      "_type": "request",
+      "parentId": "req_user_mutations",
+      "name": "Delete User",
+      "method": "POST",
+      "url": "{{ _.graphql_endpoint }}",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"query\": \"mutation DeleteUser($id: ID!) {\\n  deleteUser(id: $id)\\n}\",\n  \"variables\": {\n    \"id\": \"1\"\n  }\n}"
+      }
+    },
+    {
+      "_id": "req_category_queries",
+      "_type": "request_group",
+      "name": "📁 Category Queries",
+      "parentId": "wrk_portfolio_graphql"
+    },
+    {
+      "_id": "req_get_categories",
+      "_type": "request",
+      "parentId": "req_category_queries",
+      "name": "Get All Categories",
+      "method": "POST",
+      "url": "{{ _.graphql_endpoint }}",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"query\": \"query GetCategories($page: Int, $pageSize: Int, $sortBy: String, $sortDirection: SortDirection) {\\n  categories(page: $page, pageSize: $pageSize, sortBy: $sortBy, sortDirection: $sortDirection) {\\n    data {\\n      id\\n      name\\n      description\\n      createdAt\\n      updatedAt\\n      resumeContents {\\n        id\\n        title\\n        description\\n        detail\\n      }\\n    }\\n    pagination {\\n      page\\n      pageSize\\n      total\\n      totalPages\\n    }\\n  }\\n}\",\n  \"variables\": {\n    \"page\": 1,\n    \"pageSize\": 10,\n    \"sortBy\": \"name\",\n    \"sortDirection\": \"ASC\"\n  }\n}"
+      }
+    },
+    {
+      "_id": "req_get_category",
+      "_type": "request",
+      "parentId": "req_category_queries",
+      "name": "Get Category by ID",
+      "method": "POST",
+      "url": "{{ _.graphql_endpoint }}",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"query\": \"query GetCategory($id: ID!) {\\n  category(id: $id) {\\n    id\\n    name\\n    description\\n    createdAt\\n    updatedAt\\n    resumeContents {\\n      id\\n      title\\n      description\\n      detail\\n      createdAt\\n      updatedAt\\n    }\\n  }\\n}\",\n  \"variables\": {\n    \"id\": \"1\"\n  }\n}"
+      }
+    },
+    {
+      "_id": "req_category_mutations",
+      "_type": "request_group",
+      "name": "📁 Category Mutations",
+      "parentId": "wrk_portfolio_graphql"
+    },
+    {
+      "_id": "req_create_category",
+      "_type": "request",
+      "parentId": "req_category_mutations",
+      "name": "Create Category",
+      "method": "POST",
+      "url": "{{ _.graphql_endpoint }}",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"query\": \"mutation CreateCategory($input: CreateCategoryInput!) {\\n  createCategory(input: $input) {\\n    id\\n    name\\n    description\\n    createdAt\\n    updatedAt\\n  }\\n}\",\n  \"variables\": {\n    \"input\": {\n      \"name\": \"Web Development\",\n      \"description\": \"Front-end and back-end web development skills\"\n    }\n  }\n}"
+      }
+    },
+    {
+      "_id": "req_blog_queries",
+      "_type": "request_group",
+      "name": "📝 Blog Queries",
+      "parentId": "wrk_portfolio_graphql"
+    },
+    {
+      "_id": "req_get_blogs",
+      "_type": "request",
+      "parentId": "req_blog_queries",
+      "name": "Get All Blogs",
+      "method": "POST",
+      "url": "{{ _.graphql_endpoint }}",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"query\": \"query GetBlogs($page: Int, $pageSize: Int, $sortBy: String, $sortDirection: SortDirection) {\\n  blogs(page: $page, pageSize: $pageSize, sortBy: $sortBy, sortDirection: $sortDirection) {\\n    data {\\n      id\\n      title\\n      content\\n      summary\\n      slug\\n      author\\n      publishedAt\\n      status\\n      tags\\n      metaDescription\\n      createdAt\\n      updatedAt\\n    }\\n    pagination {\\n      page\\n      pageSize\\n      total\\n      totalPages\\n    }\\n  }\\n}\",\n  \"variables\": {\n    \"page\": 1,\n    \"pageSize\": 10,\n    \"sortBy\": \"createdAt\",\n    \"sortDirection\": \"DESC\"\n  }\n}"
+      }
+    },
+    {
+      "_id": "req_get_blog_by_slug",
+      "_type": "request",
+      "parentId": "req_blog_queries",
+      "name": "Get Blog by Slug",
+      "method": "POST",
+      "url": "{{ _.graphql_endpoint }}",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"query\": \"query GetBlogBySlug($slug: String!) {\\n  blogBySlug(slug: $slug) {\\n    id\\n    title\\n    content\\n    summary\\n    slug\\n    author\\n    publishedAt\\n    status\\n    tags\\n    metaDescription\\n    createdAt\\n    updatedAt\\n  }\\n}\",\n  \"variables\": {\n    \"slug\": \"getting-started-with-graphql\"\n  }\n}"
+      }
+    },
+    {
+      "_id": "req_get_published_blogs",
+      "_type": "request",
+      "parentId": "req_blog_queries",
+      "name": "Get Published Blogs",
+      "method": "POST",
+      "url": "{{ _.graphql_endpoint }}",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"query\": \"query GetPublishedBlogs($page: Int, $pageSize: Int, $sortBy: String, $sortDirection: SortDirection) {\\n  publishedBlogs(page: $page, pageSize: $pageSize, sortBy: $sortBy, sortDirection: $sortDirection) {\\n    data {\\n      id\\n      title\\n      content\\n      summary\\n      slug\\n      author\\n      publishedAt\\n      status\\n      tags\\n      metaDescription\\n      createdAt\\n      updatedAt\\n    }\\n    pagination {\\n      page\\n      pageSize\\n      total\\n      totalPages\\n    }\\n  }\\n}\",\n  \"variables\": {\n    \"page\": 1,\n    \"pageSize\": 5,\n    \"sortBy\": \"publishedAt\",\n    \"sortDirection\": \"DESC\"\n  }\n}"
+      }
+    },
+    {
+      "_id": "req_blog_mutations",
+      "_type": "request_group",
+      "name": "📝 Blog Mutations",
+      "parentId": "wrk_portfolio_graphql"
+    },
+    {
+      "_id": "req_create_blog",
+      "_type": "request",
+      "parentId": "req_blog_mutations",
+      "name": "Create Blog",
+      "method": "POST",
+      "url": "{{ _.graphql_endpoint }}",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"query\": \"mutation CreateBlog($input: CreateBlogInput!) {\\n  createBlog(input: $input) {\\n    id\\n    title\\n    content\\n    summary\\n    slug\\n    author\\n    publishedAt\\n    status\\n    tags\\n    metaDescription\\n    createdAt\\n    updatedAt\\n  }\\n}\",\n  \"variables\": {\n    \"input\": {\n      \"title\": \"Getting Started with GraphQL\",\n      \"content\": \"GraphQL is a powerful query language for APIs and a runtime for executing those queries with your existing data. Unlike REST APIs that expose multiple endpoints for different resources, GraphQL provides a single endpoint that allows clients to request exactly the data they need...\",\n      \"summary\": \"An introduction to GraphQL basics and how to get started\",\n      \"slug\": \"getting-started-with-graphql\",\n      \"author\": \"John Doe\",\n      \"status\": \"DRAFT\",\n      \"tags\": [\"GraphQL\", \"API\", \"Tutorial\", \"Backend\"],\n      \"metaDescription\": \"Learn the basics of GraphQL and how to implement it in your applications\"\n    }\n  }\n}"
+      }
+    },
+    {
+      "_id": "req_project_queries",
+      "_type": "request_group",
+      "name": "🚀 Project Queries",
+      "parentId": "wrk_portfolio_graphql"
+    },
+    {
+      "_id": "req_get_projects",
+      "_type": "request",
+      "parentId": "req_project_queries",
+      "name": "Get All Projects",
+      "method": "POST",
+      "url": "{{ _.graphql_endpoint }}",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"query\": \"query GetProjects($page: Int, $pageSize: Int, $sortBy: String, $sortDirection: SortDirection) {\\n  projects(page: $page, pageSize: $pageSize, sortBy: $sortBy, sortDirection: $sortDirection) {\\n    data {\\n      id\\n      title\\n      description\\n      userId\\n      user {\\n        id\\n        name\\n        email\\n      }\\n      createdAt\\n      updatedAt\\n    }\\n    pagination {\\n      page\\n      pageSize\\n      total\\n      totalPages\\n    }\\n  }\\n}\",\n  \"variables\": {\n    \"page\": 1,\n    \"pageSize\": 10,\n    \"sortBy\": \"createdAt\",\n    \"sortDirection\": \"DESC\"\n  }\n}"
+      }
+    },
+    {
+      "_id": "req_get_projects_by_user",
+      "_type": "request",
+      "parentId": "req_project_queries",
+      "name": "Get Projects by User",
+      "method": "POST",
+      "url": "{{ _.graphql_endpoint }}",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"query\": \"query GetProjectsByUser($userId: ID!, $page: Int, $pageSize: Int, $sortBy: String, $sortDirection: SortDirection) {\\n  projectsByUser(userId: $userId, page: $page, pageSize: $pageSize, sortBy: $sortBy, sortDirection: $sortDirection) {\\n    data {\\n      id\\n      title\\n      description\\n      userId\\n      user {\\n        id\\n        name\\n        email\\n      }\\n      createdAt\\n      updatedAt\\n    }\\n    pagination {\\n      page\\n      pageSize\\n      total\\n      totalPages\\n    }\\n  }\\n}\",\n  \"variables\": {\n    \"userId\": \"1\",\n    \"page\": 1,\n    \"pageSize\": 10,\n    \"sortBy\": \"createdAt\",\n    \"sortDirection\": \"DESC\"\n  }\n}"
+      }
+    },
+    {
+      "_id": "req_resume_queries",
+      "_type": "request_group",
+      "name": "📄 Resume Content Queries",
+      "parentId": "wrk_portfolio_graphql"
+    },
+    {
+      "_id": "req_get_resume_contents",
+      "_type": "request",
+      "parentId": "req_resume_queries",
+      "name": "Get All Resume Contents",
+      "method": "POST",
+      "url": "{{ _.graphql_endpoint }}",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"query\": \"query GetResumeContents($page: Int, $pageSize: Int, $sortBy: String, $sortDirection: SortDirection) {\\n  resumeContents(page: $page, pageSize: $pageSize, sortBy: $sortBy, sortDirection: $sortDirection) {\\n    data {\\n      id\\n      title\\n      description\\n      detail\\n      categoryId\\n      category {\\n        id\\n        name\\n        description\\n      }\\n      createdAt\\n      updatedAt\\n    }\\n    pagination {\\n      page\\n      pageSize\\n      total\\n      totalPages\\n    }\\n  }\\n}\",\n  \"variables\": {\n    \"page\": 1,\n    \"pageSize\": 10,\n    \"sortBy\": \"createdAt\",\n    \"sortDirection\": \"DESC\"\n  }\n}"
+      }
+    },
+    {
+      "_id": "req_get_resume_by_category",
+      "_type": "request",
+      "parentId": "req_resume_queries",
+      "name": "Get Resume Contents by Category",
+      "method": "POST",
+      "url": "{{ _.graphql_endpoint }}",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"query\": \"query GetResumeContentsByCategory($categoryId: ID!, $page: Int, $pageSize: Int, $sortBy: String, $sortDirection: SortDirection) {\\n  resumeContentsByCategory(categoryId: $categoryId, page: $page, pageSize: $pageSize, sortBy: $sortBy, sortDirection: $sortDirection) {\\n    data {\\n      id\\n      title\\n      description\\n      detail\\n      categoryId\\n      category {\\n        id\\n        name\\n        description\\n      }\\n      createdAt\\n      updatedAt\\n    }\\n    pagination {\\n      page\\n      pageSize\\n      total\\n      totalPages\\n    }\\n  }\\n}\",\n  \"variables\": {\n    \"categoryId\": \"1\",\n    \"page\": 1,\n    \"pageSize\": 10,\n    \"sortBy\": \"createdAt\",\n    \"sortDirection\": \"DESC\"\n  }\n}"
+      }
+    },
+    {
+      "_id": "req_complex_queries",
+      "_type": "request_group",
+      "name": "🔥 Complex Queries",
+      "parentId": "wrk_portfolio_graphql"
+    },
+    {
+      "_id": "req_complete_portfolio",
+      "_type": "request",
+      "parentId": "req_complex_queries",
+      "name": "Complete Portfolio Data",
+      "method": "POST",
+      "url": "{{ _.graphql_endpoint }}",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"query\": \"query GetCompletePortfolioData {\\n  user(id: \\\"1\\\") {\\n    id\\n    name\\n    email\\n    projects {\\n      id\\n      title\\n      description\\n    }\\n  }\\n  \\n  categories {\\n    data {\\n      id\\n      name\\n      description\\n      resumeContents {\\n        id\\n        title\\n        description\\n        detail\\n      }\\n    }\\n  }\\n  \\n  publishedBlogs(page: 1, pageSize: 5) {\\n    data {\\n      id\\n      title\\n      summary\\n      slug\\n      publishedAt\\n      tags\\n    }\\n    pagination {\\n      total\\n      totalPages\\n    }\\n  }\\n}\"\n}"
+      }
+    },
+    {
+      "_id": "req_blog_dashboard",
+      "_type": "request",
+      "parentId": "req_complex_queries",
+      "name": "Blog Management Dashboard",
+      "method": "POST",
+      "url": "{{ _.graphql_endpoint }}",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"query\": \"query BlogDashboard {\\n  blogs {\\n    data {\\n      id\\n      title\\n      status\\n      createdAt\\n      updatedAt\\n    }\\n    pagination {\\n      total\\n      totalPages\\n    }\\n  }\\n  \\n  blogsByStatus(status: DRAFT) {\\n    pagination {\\n      total\\n    }\\n  }\\n  \\n  blogsByStatus(status: PUBLISHED) {\\n    pagination {\\n      total\\n    }\\n  }\\n}\"\n}"
+      }
+    }
+  ]
+}

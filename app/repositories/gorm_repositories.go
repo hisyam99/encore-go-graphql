@@ -62,7 +62,9 @@ func (r *gormUserRepository) List(ctx context.Context, params PaginationParams) 
 	// Apply pagination
 	offset := (params.Page - 1) * params.PageSize
 	if params.SortBy != "" {
-		order := params.SortBy
+		// Convert camelCase to snake_case for database columns
+		sortColumn := convertToSnakeCase(params.SortBy)
+		order := sortColumn
 		if params.SortDesc {
 			order += " DESC"
 		}
@@ -140,7 +142,7 @@ func (r *gormCategoryRepository) List(ctx context.Context, params PaginationPara
 	// Apply pagination
 	offset := (params.Page - 1) * params.PageSize
 	if params.SortBy != "" {
-		order := params.SortBy
+		order := convertToSnakeCase(params.SortBy)
 		if params.SortDesc {
 			order += " DESC"
 		}

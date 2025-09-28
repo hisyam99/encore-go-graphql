@@ -53,7 +53,7 @@ func (r *gormResumeContentRepository) List(ctx context.Context, params Paginatio
 	// Apply pagination
 	offset := (params.Page - 1) * params.PageSize
 	if params.SortBy != "" {
-		order := params.SortBy
+		order := convertToSnakeCase(params.SortBy)
 		if params.SortDesc {
 			order += " DESC"
 		}
@@ -91,7 +91,7 @@ func (r *gormResumeContentRepository) ListByCategory(ctx context.Context, catego
 	// Apply pagination
 	offset := (params.Page - 1) * params.PageSize
 	if params.SortBy != "" {
-		order := params.SortBy
+		order := convertToSnakeCase(params.SortBy)
 		if params.SortDesc {
 			order += " DESC"
 		}
@@ -160,7 +160,7 @@ func (r *gormProjectRepository) List(ctx context.Context, params PaginationParam
 	// Apply pagination
 	offset := (params.Page - 1) * params.PageSize
 	if params.SortBy != "" {
-		order := params.SortBy
+		order := convertToSnakeCase(params.SortBy)
 		if params.SortDesc {
 			order += " DESC"
 		}
@@ -198,7 +198,7 @@ func (r *gormProjectRepository) ListByUser(ctx context.Context, userID uint, par
 	// Apply pagination
 	offset := (params.Page - 1) * params.PageSize
 	if params.SortBy != "" {
-		order := params.SortBy
+		order := convertToSnakeCase(params.SortBy)
 		if params.SortDesc {
 			order += " DESC"
 		}
