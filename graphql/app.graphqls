@@ -1,30 +1,72 @@
+enum BlogStatus {
+  DRAFT
+  PUBLISHED
+}
+
+enum SortDirection {
+  ASC
+  DESC
+}
+
+type PaginationInfo {
+  page: Int!
+  pageSize: Int!
+  total: Int!
+  totalPages: Int!
+}
+
 type Query {
-  users: [User!]!
+  # User queries
+  users(page: Int = 1, pageSize: Int = 10, sortBy: String = "createdAt", sortDirection: SortDirection = DESC): UserConnection!
   user(id: ID!): User
-  projects: [Project!]!
+
+  # Category queries
+  categories(page: Int = 1, pageSize: Int = 10, sortBy: String = "name", sortDirection: SortDirection = ASC): CategoryConnection!
+  category(id: ID!): Category
+
+  # Resume content queries
+  resumeContents(page: Int = 1, pageSize: Int = 10, sortBy: String = "createdAt", sortDirection: SortDirection = DESC): ResumeContentConnection!
+  resumeContent(id: ID!): ResumeContent
+  resumeContentsByCategory(categoryId: ID!, page: Int = 1, pageSize: Int = 10, sortBy: String = "createdAt", sortDirection: SortDirection = DESC): ResumeContentConnection!
+
+  # Project queries
+  projects(page: Int = 1, pageSize: Int = 10, sortBy: String = "createdAt", sortDirection: SortDirection = DESC): ProjectConnection!
   project(id: ID!): Project
-  blogs: [Blog!]!
+  projectsByUser(userId: ID!, page: Int = 1, pageSize: Int = 10, sortBy: String = "createdAt", sortDirection: SortDirection = DESC): ProjectConnection!
+
+  # Blog queries
+  blogs(page: Int = 1, pageSize: Int = 10, sortBy: String = "createdAt", sortDirection: SortDirection = DESC): BlogConnection!
   blog(id: ID!): Blog
-  resumes: [Resume!]!
-  resume(id: ID!): Resume
+  blogBySlug(slug: String!): Blog
+  publishedBlogs(page: Int = 1, pageSize: Int = 10, sortBy: String = "publishedAt", sortDirection: SortDirection = DESC): BlogConnection!
+  blogsByStatus(status: BlogStatus!, page: Int = 1, pageSize: Int = 10, sortBy: String = "createdAt", sortDirection: SortDirection = DESC): BlogConnection!
 }
 
 type Mutation {
+  # User mutations
   createUser(input: CreateUserInput!): User!
   updateUser(id: ID!, input: UpdateUserInput!): User!
   deleteUser(id: ID!): Boolean!
 
+  # Category mutations
+  createCategory(input: CreateCategoryInput!): Category!
+  updateCategory(id: ID!, input: UpdateCategoryInput!): Category!
+  deleteCategory(id: ID!): Boolean!
+
+  # Resume content mutations
+  createResumeContent(input: CreateResumeContentInput!): ResumeContent!
+  updateResumeContent(id: ID!, input: UpdateResumeContentInput!): ResumeContent!
+  deleteResumeContent(id: ID!): Boolean!
+
+  # Project mutations
   createProject(input: CreateProjectInput!): Project!
   updateProject(id: ID!, input: UpdateProjectInput!): Project!
   deleteProject(id: ID!): Boolean!
 
+  # Blog mutations
   createBlog(input: CreateBlogInput!): Blog!
   updateBlog(id: ID!, input: UpdateBlogInput!): Blog!
   deleteBlog(id: ID!): Boolean!
-
-  createResume(input: CreateResumeInput!): Resume!
-  updateResume(id: ID!, input: UpdateResumeInput!): Resume!
-  deleteResume(id: ID!): Boolean!
 }
 
 type User {
@@ -32,31 +74,82 @@ type User {
   name: String!
   email: String!
   createdAt: String!
+  updatedAt: String!
   projects: [Project!]!
+}
+
+type Category {
+  id: ID!
+  name: String!
+  description: String
+  createdAt: String!
+  updatedAt: String!
+  resumeContents: [ResumeContent!]!
+}
+
+type ResumeContent {
+  id: ID!
+  title: String!
+  description: String
+  detail: String
+  categoryId: ID!
+  category: Category!
+  createdAt: String!
+  updatedAt: String!
 }
 
 type Project {
   id: ID!
   title: String!
-  description: String!
-  userID: ID!
+  description: String
+  userId: ID
   user: User
+  createdAt: String!
+  updatedAt: String!
 }
 
 type Blog {
   id: ID!
   title: String!
   content: String!
+  summary: String
+  slug: String!
+  author: String
+  publishedAt: String
+  status: BlogStatus!
+  tags: [String!]!
+  metaDescription: String
   createdAt: String!
+  updatedAt: String!
 }
 
-type Resume {
-  id: ID!
-  title: String!
-  description: String!
-  category: String!
+# Connection types for pagination
+type UserConnection {
+  data: [User!]!
+  pagination: PaginationInfo!
 }
 
+type CategoryConnection {
+  data: [Category!]!
+  pagination: PaginationInfo!
+}
+
+type ResumeContentConnection {
+  data: [ResumeContent!]!
+  pagination: PaginationInfo!
+}
+
+type ProjectConnection {
+  data: [Project!]!
+  pagination: PaginationInfo!
+}
+
+type BlogConnection {
+  data: [Blog!]!
+  pagination: PaginationInfo!
+}
+
+# Input types for mutations
 input CreateUserInput {
   name: String!
   email: String!
@@ -67,36 +160,60 @@ input UpdateUserInput {
   email: String
 }
 
+input CreateCategoryInput {
+  name: String!
+  description: String
+}
+
+input UpdateCategoryInput {
+  name: String
+  description: String
+}
+
+input CreateResumeContentInput {
+  title: String!
+  description: String
+  detail: String
+  categoryId: ID!
+}
+
+input UpdateResumeContentInput {
+  title: String
+  description: String
+  detail: String
+  categoryId: ID
+}
+
 input CreateProjectInput {
   title: String!
-  description: String!
-  userID: ID!
+  description: String
+  userId: ID
 }
 
 input UpdateProjectInput {
   title: String
   description: String
-  userID: ID
+  userId: ID
 }
 
 input CreateBlogInput {
   title: String!
   content: String!
+  summary: String
+  slug: String!
+  author: String
+  status: BlogStatus = DRAFT
+  tags: [String!] = []
+  metaDescription: String
 }
 
 input UpdateBlogInput {
   title: String
   content: String
-}
-
-input CreateResumeInput {
-  title: String!
-  description: String!
-  category: String!
-}
-
-input UpdateResumeInput {
-  title: String
-  description: String
-  category: String
+  summary: String
+  slug: String
+  author: String
+  status: BlogStatus
+  tags: [String!]
+  metaDescription: String
 }

@@ -1,11 +1,15 @@
 package graphql
 
-import "gorm.io/gorm"
+import (
+	"encore.app/app/services"
+	"gorm.io/gorm"
+)
 
 // This file will not be regenerated automatically.
 //
 // It serves as dependency injection for your app, add any dependencies you require here.
 
 type Resolver struct {
-	db *gorm.DB
+	db       *gorm.DB
+	services *services.Services
 }

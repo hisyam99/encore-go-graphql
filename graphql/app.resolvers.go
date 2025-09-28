@@ -11,87 +11,235 @@ import (
 	"time"
 
 	"encore.app/app"
+	"encore.app/app/repositories"
+	"encore.app/app/utils"
 	"encore.app/graphql/generated"
 	"encore.app/graphql/model"
 	"gorm.io/gorm"
 )
-
-// CreatedAt is the resolver for the createdAt field.
-func (r *blogResolver) CreatedAt(ctx context.Context, obj *app.Blog) (string, error) {
-	return obj.CreatedAt.Format(time.RFC3339), nil
-}
 
 // ID is the resolver for the id field.
 func (r *blogResolver) ID(ctx context.Context, obj *app.Blog) (string, error) {
 	return strconv.FormatUint(uint64(obj.ID), 10), nil
 }
 
-// CreateBlog is the resolver for the createBlog field.
-func (r *mutationResolver) CreateBlog(ctx context.Context, input model.CreateBlogInput) (*app.Blog, error) {
-	blog := &app.Blog{
-		Title:     input.Title,
-		Content:   input.Content,
-		CreatedAt: time.Now(),
-	}
-	if err := r.db.Create(blog).Error; err != nil {
-		return nil, err
-	}
-	return blog, nil
+// PublishedAt is the resolver for the publishedAt field.
+func (r *blogResolver) PublishedAt(ctx context.Context, obj *app.Blog) (*string, error) {
+	return utils.FormatTimePtr(obj.PublishedAt), nil
 }
 
-// CreateProject is the resolver for the createProject field.
-func (r *mutationResolver) CreateProject(ctx context.Context, input model.CreateProjectInput) (*app.Project, error) {
-	userID, err := strconv.ParseUint(input.UserID, 10, 64)
-	if err != nil {
-		return nil, err
-	}
-	project := &app.Project{
-		Title:       input.Title,
-		Description: input.Description,
-		UserID:      uint(userID),
-	}
-	if err := r.db.Create(project).Error; err != nil {
-		return nil, err
-	}
-	return project, nil
+// Tags is the resolver for the tags field.
+func (r *blogResolver) Tags(ctx context.Context, obj *app.Blog) ([]string, error) {
+	return []string(obj.Tags), nil
 }
 
-// CreateResume is the resolver for the createResume field.
-func (r *mutationResolver) CreateResume(ctx context.Context, input model.CreateResumeInput) (*app.Resume, error) {
-	resume := &app.Resume{
-		Title:       input.Title,
-		Description: input.Description,
-		Category:    input.Category,
-	}
-	if err := r.db.Create(resume).Error; err != nil {
-		return nil, err
-	}
-	return resume, nil
+// CreatedAt is the resolver for the createdAt field.
+func (r *blogResolver) CreatedAt(ctx context.Context, obj *app.Blog) (string, error) {
+	return obj.CreatedAt.Format(time.RFC3339), nil
+}
+
+// UpdatedAt is the resolver for the updatedAt field.
+func (r *blogResolver) UpdatedAt(ctx context.Context, obj *app.Blog) (string, error) {
+	return utils.FormatTime(obj.UpdatedAt), nil
+}
+
+// ID is the resolver for the id field.
+func (r *categoryResolver) ID(ctx context.Context, obj *app.Category) (string, error) {
+	return utils.FormatID(obj.ID), nil
+}
+
+// CreatedAt is the resolver for the createdAt field.
+func (r *categoryResolver) CreatedAt(ctx context.Context, obj *app.Category) (string, error) {
+	return utils.FormatTime(obj.CreatedAt), nil
+}
+
+// UpdatedAt is the resolver for the updatedAt field.
+func (r *categoryResolver) UpdatedAt(ctx context.Context, obj *app.Category) (string, error) {
+	return utils.FormatTime(obj.UpdatedAt), nil
 }
 
 // CreateUser is the resolver for the createUser field.
 func (r *mutationResolver) CreateUser(ctx context.Context, input model.CreateUserInput) (*app.User, error) {
-	user := &app.User{
-		Name:      input.Name,
-		Email:     input.Email,
-		CreatedAt: time.Now(),
-	}
-	if err := r.db.Create(user).Error; err != nil {
-		return nil, err
+	user, err := r.services.User.CreateUser(ctx, input.Name, input.Email)
+	if err != nil {
+		return nil, utils.HandleRepositoryError(err, "user")
 	}
 	return user, nil
 }
 
-// DeleteBlog is the resolver for the deleteBlog field.
-func (r *mutationResolver) DeleteBlog(ctx context.Context, id string) (bool, error) {
-	blogID, err := strconv.ParseUint(id, 10, 64)
+// UpdateUser is the resolver for the updateUser field.
+func (r *mutationResolver) UpdateUser(ctx context.Context, id string, input model.UpdateUserInput) (*app.User, error) {
+	userID, err := utils.ParseID(id)
+	if err != nil {
+		return nil, err
+	}
+	user, err := r.services.User.UpdateUser(ctx, userID, input.Name, input.Email)
+	if err != nil {
+		return nil, utils.HandleRepositoryError(err, "user")
+	}
+	return user, nil
+}
+
+// DeleteUser is the resolver for the deleteUser field.
+func (r *mutationResolver) DeleteUser(ctx context.Context, id string) (bool, error) {
+	userID, err := utils.ParseID(id)
 	if err != nil {
 		return false, err
 	}
-	if err := r.db.Delete(&app.Blog{}, blogID).Error; err != nil {
+	err = r.services.User.DeleteUser(ctx, userID)
+	if err != nil {
+		return false, utils.HandleRepositoryError(err, "user")
+	}
+	return true, nil
+}
+
+// CreateCategory is the resolver for the createCategory field.
+func (r *mutationResolver) CreateCategory(ctx context.Context, input model.CreateCategoryInput) (*app.Category, error) {
+	description := ""
+	if input.Description != nil {
+		description = *input.Description
+	}
+	category, err := r.services.Category.CreateCategory(ctx, input.Name, description)
+	if err != nil {
+		return nil, err
+	}
+	return category, nil
+}
+
+// UpdateCategory is the resolver for the updateCategory field.
+func (r *mutationResolver) UpdateCategory(ctx context.Context, id string, input model.UpdateCategoryInput) (*app.Category, error) {
+	categoryID, err := strconv.ParseUint(id, 10, 32)
+	if err != nil {
+		return nil, errors.New("invalid category ID")
+	}
+
+	category, err := r.services.Category.UpdateCategory(ctx, uint(categoryID), input.Name, input.Description)
+	if err != nil {
+		return nil, err
+	}
+	return category, nil
+}
+
+// DeleteCategory is the resolver for the deleteCategory field.
+func (r *mutationResolver) DeleteCategory(ctx context.Context, id string) (bool, error) {
+	categoryID, err := strconv.ParseUint(id, 10, 32)
+	if err != nil {
+		return false, errors.New("invalid category ID")
+	}
+
+	err = r.services.Category.DeleteCategory(ctx, uint(categoryID))
+	if err != nil {
 		return false, err
 	}
 	return true, nil
+}
+
+// CreateResumeContent is the resolver for the createResumeContent field.
+func (r *mutationResolver) CreateResumeContent(ctx context.Context, input model.CreateResumeContentInput) (*app.ResumeContent, error) {
+	categoryID, err := strconv.ParseUint(input.CategoryID, 10, 32)
+	if err != nil {
+		return nil, errors.New("invalid category ID")
+	}
+
+	description := ""
+	if input.Description != nil {
+		description = *input.Description
+	}
+
+	detail := ""
+	if input.Detail != nil {
+		detail = *input.Detail
+	}
+
+	resumeContent, err := r.services.ResumeContent.CreateResumeContent(ctx, input.Title, description, detail, uint(categoryID))
+	if err != nil {
+		return nil, err
+	}
+	return resumeContent, nil
+}
+
+// UpdateResumeContent is the resolver for the updateResumeContent field.
+func (r *mutationResolver) UpdateResumeContent(ctx context.Context, id string, input model.UpdateResumeContentInput) (*app.ResumeContent, error) {
+	resumeContentID, err := strconv.ParseUint(id, 10, 32)
+	if err != nil {
+		return nil, errors.New("invalid resume content ID")
+	}
+
+	var categoryID *uint = nil
+	if input.CategoryID != nil {
+		cID, err := strconv.ParseUint(*input.CategoryID, 10, 32)
+		if err != nil {
+			return nil, errors.New("invalid category ID")
+		}
+		categoryIDVal := uint(cID)
+		categoryID = &categoryIDVal
+	}
+
+	resumeContent, err := r.services.ResumeContent.UpdateResumeContent(ctx, uint(resumeContentID), input.Title, input.Description, input.Detail, categoryID)
+	if err != nil {
+		return nil, err
+	}
+	return resumeContent, nil
+}
+
+// DeleteResumeContent is the resolver for the deleteResumeContent field.
+func (r *mutationResolver) DeleteResumeContent(ctx context.Context, id string) (bool, error) {
+	resumeContentID, err := strconv.ParseUint(id, 10, 32)
+	if err != nil {
+		return false, errors.New("invalid resume content ID")
+	}
+
+	err = r.services.ResumeContent.DeleteResumeContent(ctx, uint(resumeContentID))
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+// CreateProject is the resolver for the createProject field.
+func (r *mutationResolver) CreateProject(ctx context.Context, input model.CreateProjectInput) (*app.Project, error) {
+	var userID *uint
+	if input.UserID != nil {
+		parsed, err := utils.ParseID(*input.UserID)
+		if err != nil {
+			return nil, err
+		}
+		userID = &parsed
+	}
+
+	description := ""
+	if input.Description != nil {
+		description = *input.Description
+	}
+
+	project, err := r.services.Project.CreateProject(ctx, input.Title, description, userID)
+	if err != nil {
+		return nil, utils.HandleRepositoryError(err, "project")
+	}
+	return project, nil
+}
+
+// UpdateProject is the resolver for the updateProject field.
+func (r *mutationResolver) UpdateProject(ctx context.Context, id string, input model.UpdateProjectInput) (*app.Project, error) {
+	projectID, err := utils.ParseID(id)
+	if err != nil {
+		return nil, err
+	}
+
+	var userID *uint
+	if input.UserID != nil {
+		parsed, err := utils.ParseID(*input.UserID)
+		if err != nil {
+			return nil, err
+		}
+		userID = &parsed
+	}
+
+	project, err := r.services.Project.UpdateProject(ctx, projectID, input.Title, input.Description, userID)
+	if err != nil {
+		return nil, utils.HandleRepositoryError(err, "project")
+	}
+	return project, nil
 }
 
 // DeleteProject is the resolver for the deleteProject field.
@@ -106,28 +254,17 @@ func (r *mutationResolver) DeleteProject(ctx context.Context, id string) (bool, 
 	return true, nil
 }
 
-// DeleteResume is the resolver for the deleteResume field.
-func (r *mutationResolver) DeleteResume(ctx context.Context, id string) (bool, error) {
-	resumeID, err := strconv.ParseUint(id, 10, 64)
-	if err != nil {
-		return false, err
+// CreateBlog is the resolver for the createBlog field.
+func (r *mutationResolver) CreateBlog(ctx context.Context, input model.CreateBlogInput) (*app.Blog, error) {
+	blog := &app.Blog{
+		Title:     input.Title,
+		Content:   input.Content,
+		CreatedAt: time.Now(),
 	}
-	if err := r.db.Delete(&app.Resume{}, resumeID).Error; err != nil {
-		return false, err
+	if err := r.db.Create(blog).Error; err != nil {
+		return nil, err
 	}
-	return true, nil
-}
-
-// DeleteUser is the resolver for the deleteUser field.
-func (r *mutationResolver) DeleteUser(ctx context.Context, id string) (bool, error) {
-	userID, err := strconv.ParseUint(id, 10, 64)
-	if err != nil {
-		return false, err
-	}
-	if err := r.db.Delete(&app.User{}, userID).Error; err != nil {
-		return false, err
-	}
-	return true, nil
+	return blog, nil
 }
 
 // UpdateBlog is the resolver for the updateBlog field.
@@ -152,80 +289,16 @@ func (r *mutationResolver) UpdateBlog(ctx context.Context, id string, input mode
 	return &blog, nil
 }
 
-// UpdateProject is the resolver for the updateProject field.
-func (r *mutationResolver) UpdateProject(ctx context.Context, id string, input model.UpdateProjectInput) (*app.Project, error) {
-	projectID, err := strconv.ParseUint(id, 10, 64)
+// DeleteBlog is the resolver for the deleteBlog field.
+func (r *mutationResolver) DeleteBlog(ctx context.Context, id string) (bool, error) {
+	blogID, err := strconv.ParseUint(id, 10, 64)
 	if err != nil {
-		return nil, err
+		return false, err
 	}
-	var project app.Project
-	if err := r.db.First(&project, projectID).Error; err != nil {
-		return nil, err
+	if err := r.db.Delete(&app.Blog{}, blogID).Error; err != nil {
+		return false, err
 	}
-	if input.Title != nil {
-		project.Title = *input.Title
-	}
-	if input.Description != nil {
-		project.Description = *input.Description
-	}
-	if input.UserID != nil {
-		userID, err := strconv.ParseUint(*input.UserID, 10, 64)
-		if err != nil {
-			return nil, err
-		}
-		project.UserID = uint(userID)
-	}
-	if err := r.db.Save(&project).Error; err != nil {
-		return nil, err
-	}
-	return &project, nil
-}
-
-// UpdateResume is the resolver for the updateResume field.
-func (r *mutationResolver) UpdateResume(ctx context.Context, id string, input model.UpdateResumeInput) (*app.Resume, error) {
-	resumeID, err := strconv.ParseUint(id, 10, 64)
-	if err != nil {
-		return nil, err
-	}
-	var resume app.Resume
-	if err := r.db.First(&resume, resumeID).Error; err != nil {
-		return nil, err
-	}
-	if input.Title != nil {
-		resume.Title = *input.Title
-	}
-	if input.Description != nil {
-		resume.Description = *input.Description
-	}
-	if input.Category != nil {
-		resume.Category = *input.Category
-	}
-	if err := r.db.Save(&resume).Error; err != nil {
-		return nil, err
-	}
-	return &resume, nil
-}
-
-// UpdateUser is the resolver for the updateUser field.
-func (r *mutationResolver) UpdateUser(ctx context.Context, id string, input model.UpdateUserInput) (*app.User, error) {
-	userID, err := strconv.ParseUint(id, 10, 64)
-	if err != nil {
-		return nil, err
-	}
-	var user app.User
-	if err := r.db.First(&user, userID).Error; err != nil {
-		return nil, err
-	}
-	if input.Name != nil {
-		user.Name = *input.Name
-	}
-	if input.Email != nil {
-		user.Email = *input.Email
-	}
-	if err := r.db.Save(&user).Error; err != nil {
-		return nil, err
-	}
-	return &user, nil
+	return true, nil
 }
 
 // ID is the resolver for the id field.
@@ -233,46 +306,269 @@ func (r *projectResolver) ID(ctx context.Context, obj *app.Project) (string, err
 	return strconv.FormatUint(uint64(obj.ID), 10), nil
 }
 
-// User is the resolver for the user field.
-func (r *projectResolver) User(ctx context.Context, obj *app.Project) (*app.User, error) {
-	var user app.User
-	if err := r.db.First(&user, obj.UserID).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, nil
-		}
-		return nil, err
-	}
-	return &user, nil
-}
-
 // UserID is the resolver for the userID field.
-func (r *projectResolver) UserID(ctx context.Context, obj *app.Project) (string, error) {
-	return strconv.FormatUint(uint64(obj.UserID), 10), nil
+func (r *projectResolver) UserID(ctx context.Context, obj *app.Project) (*string, error) {
+	if obj.UserID == nil {
+		return nil, nil
+	}
+	userIDStr := utils.FormatID(*obj.UserID)
+	return &userIDStr, nil
 }
 
-// Blog is the resolver for the blog field.
-func (r *queryResolver) Blog(ctx context.Context, id string) (*app.Blog, error) {
-	blogID, err := strconv.ParseUint(id, 10, 64)
+// CreatedAt is the resolver for the createdAt field.
+func (r *projectResolver) CreatedAt(ctx context.Context, obj *app.Project) (string, error) {
+	return utils.FormatTime(obj.CreatedAt), nil
+}
+
+// UpdatedAt is the resolver for the updatedAt field.
+func (r *projectResolver) UpdatedAt(ctx context.Context, obj *app.Project) (string, error) {
+	return utils.FormatTime(obj.UpdatedAt), nil
+}
+
+// Users is the resolver for the users field.
+func (r *queryResolver) Users(ctx context.Context, page *int, pageSize *int, sortBy *string, sortDirection *model.SortDirection) (*model.UserConnection, error) {
+	// Set defaults
+	pageNum := 1
+	if page != nil {
+		pageNum = *page
+	}
+	pageSizeNum := 10
+	if pageSize != nil {
+		pageSizeNum = *pageSize
+	}
+	sortByStr := "createdAt"
+	if sortBy != nil {
+		sortByStr = *sortBy
+	}
+
+	params := utils.ValidatePaginationParams(pageNum, pageSizeNum, sortByStr)
+	if sortDirection != nil && *sortDirection == model.SortDirectionAsc {
+		params.SortDesc = false
+	}
+
+	result, err := r.services.User.ListUsers(ctx, params)
+	if err != nil {
+		return nil, utils.HandleRepositoryError(err, "users")
+	}
+
+	return &model.UserConnection{
+		Data: utils.ToPointerSlice(result.Data),
+		Pagination: &model.PaginationInfo{
+			Page:       result.Page,
+			PageSize:   result.PageSize,
+			Total:      int(result.Total),
+			TotalPages: result.TotalPages,
+		},
+	}, nil
+}
+
+// User is the resolver for the user field.
+func (r *queryResolver) User(ctx context.Context, id string) (*app.User, error) {
+	userID, err := utils.ParseID(id)
 	if err != nil {
 		return nil, err
 	}
-	var blog app.Blog
-	if err := r.db.First(&blog, blogID).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, nil
-		}
-		return nil, err
+	user, err := r.services.User.GetUser(ctx, userID)
+	if err != nil {
+		return nil, utils.HandleRepositoryError(err, "user")
 	}
-	return &blog, nil
+	return user, nil
 }
 
-// Blogs is the resolver for the blogs field.
-func (r *queryResolver) Blogs(ctx context.Context) ([]*app.Blog, error) {
-	var blogs []*app.Blog
-	if err := r.db.Find(&blogs).Error; err != nil {
+// Categories is the resolver for the categories field.
+func (r *queryResolver) Categories(ctx context.Context, page *int, pageSize *int, sortBy *string, sortDirection *model.SortDirection) (*model.CategoryConnection, error) {
+	params := repositories.PaginationParams{
+		Page:     1,
+		PageSize: 10,
+	}
+
+	if page != nil && *page > 0 {
+		params.Page = *page
+	}
+	if pageSize != nil && *pageSize > 0 {
+		params.PageSize = *pageSize
+	}
+	if sortBy != nil {
+		params.SortBy = *sortBy
+	}
+	if sortDirection != nil && *sortDirection == model.SortDirectionDesc {
+		params.SortDesc = true
+	}
+
+	result, err := r.services.Category.ListCategories(ctx, params)
+	if err != nil {
 		return nil, err
 	}
-	return blogs, nil
+
+	// Convert to CategoryConnection
+	data := make([]*app.Category, len(result.Data))
+	for i, category := range result.Data {
+		data[i] = &category
+	}
+
+	return &model.CategoryConnection{
+		Data: data,
+		Pagination: &model.PaginationInfo{
+			Page:       result.Page,
+			TotalPages: result.TotalPages,
+			Total:      int(result.Total),
+			PageSize:   result.PageSize,
+		},
+	}, nil
+}
+
+// Category is the resolver for the category field.
+func (r *queryResolver) Category(ctx context.Context, id string) (*app.Category, error) {
+	categoryID, err := strconv.ParseUint(id, 10, 32)
+	if err != nil {
+		return nil, errors.New("invalid category ID")
+	}
+
+	category, err := r.services.Category.GetCategory(ctx, uint(categoryID))
+	if err != nil {
+		return nil, err
+	}
+	return category, nil
+}
+
+// ResumeContents is the resolver for the resumeContents field.
+func (r *queryResolver) ResumeContents(ctx context.Context, page *int, pageSize *int, sortBy *string, sortDirection *model.SortDirection) (*model.ResumeContentConnection, error) {
+	params := repositories.PaginationParams{
+		Page:     1,
+		PageSize: 10,
+	}
+
+	if page != nil && *page > 0 {
+		params.Page = *page
+	}
+	if pageSize != nil && *pageSize > 0 {
+		params.PageSize = *pageSize
+	}
+	if sortBy != nil {
+		params.SortBy = *sortBy
+	}
+	if sortDirection != nil && *sortDirection == model.SortDirectionDesc {
+		params.SortDesc = true
+	}
+
+	result, err := r.services.ResumeContent.ListResumeContents(ctx, params)
+	if err != nil {
+		return nil, err
+	}
+
+	// Convert to ResumeContentConnection
+	data := make([]*app.ResumeContent, len(result.Data))
+	for i, resumeContent := range result.Data {
+		data[i] = &resumeContent
+	}
+
+	return &model.ResumeContentConnection{
+		Data: data,
+		Pagination: &model.PaginationInfo{
+			Page:       result.Page,
+			TotalPages: result.TotalPages,
+			Total:      int(result.Total),
+			PageSize:   result.PageSize,
+		},
+	}, nil
+}
+
+// ResumeContent is the resolver for the resumeContent field.
+func (r *queryResolver) ResumeContent(ctx context.Context, id string) (*app.ResumeContent, error) {
+	resumeContentID, err := strconv.ParseUint(id, 10, 32)
+	if err != nil {
+		return nil, errors.New("invalid resume content ID")
+	}
+
+	resumeContent, err := r.services.ResumeContent.GetResumeContent(ctx, uint(resumeContentID))
+	if err != nil {
+		return nil, err
+	}
+	return resumeContent, nil
+}
+
+// ResumeContentsByCategory is the resolver for the resumeContentsByCategory field.
+func (r *queryResolver) ResumeContentsByCategory(ctx context.Context, categoryID string, page *int, pageSize *int, sortBy *string, sortDirection *model.SortDirection) (*model.ResumeContentConnection, error) {
+	catID, err := strconv.ParseUint(categoryID, 10, 32)
+	if err != nil {
+		return nil, errors.New("invalid category ID")
+	}
+
+	params := repositories.PaginationParams{
+		Page:     1,
+		PageSize: 10,
+	}
+
+	if page != nil && *page > 0 {
+		params.Page = *page
+	}
+	if pageSize != nil && *pageSize > 0 {
+		params.PageSize = *pageSize
+	}
+	if sortBy != nil {
+		params.SortBy = *sortBy
+	}
+	if sortDirection != nil && *sortDirection == model.SortDirectionDesc {
+		params.SortDesc = true
+	}
+
+	result, err := r.services.ResumeContent.ListResumeContentsByCategory(ctx, uint(catID), params)
+	if err != nil {
+		return nil, err
+	}
+
+	// Convert to ResumeContentConnection
+	data := make([]*app.ResumeContent, len(result.Data))
+	for i, resumeContent := range result.Data {
+		data[i] = &resumeContent
+	}
+
+	return &model.ResumeContentConnection{
+		Data: data,
+		Pagination: &model.PaginationInfo{
+			Page:       result.Page,
+			TotalPages: result.TotalPages,
+			Total:      int(result.Total),
+			PageSize:   result.PageSize,
+		},
+	}, nil
+}
+
+// Projects is the resolver for the projects field.
+func (r *queryResolver) Projects(ctx context.Context, page *int, pageSize *int, sortBy *string, sortDirection *model.SortDirection) (*model.ProjectConnection, error) {
+	// Set defaults
+	pageNum := 1
+	if page != nil {
+		pageNum = *page
+	}
+	pageSizeNum := 10
+	if pageSize != nil {
+		pageSizeNum = *pageSize
+	}
+	sortByStr := "createdAt"
+	if sortBy != nil {
+		sortByStr = *sortBy
+	}
+
+	params := utils.ValidatePaginationParams(pageNum, pageSizeNum, sortByStr)
+	if sortDirection != nil && *sortDirection == model.SortDirectionAsc {
+		params.SortDesc = false
+	}
+
+	result, err := r.services.Project.ListProjects(ctx, params)
+	if err != nil {
+		return nil, utils.HandleRepositoryError(err, "projects")
+	}
+
+	return &model.ProjectConnection{
+		Data: utils.ToPointerSlice(result.Data),
+		Pagination: &model.PaginationInfo{
+			Page:       result.Page,
+			PageSize:   result.PageSize,
+			Total:      int(result.Total),
+			TotalPages: result.TotalPages,
+		},
+	}, nil
 }
 
 // Project is the resolver for the project field.
@@ -291,67 +587,221 @@ func (r *queryResolver) Project(ctx context.Context, id string) (*app.Project, e
 	return &project, nil
 }
 
-// Projects is the resolver for the projects field.
-func (r *queryResolver) Projects(ctx context.Context) ([]*app.Project, error) {
-	var projects []*app.Project
-	if err := r.db.Find(&projects).Error; err != nil {
-		return nil, err
+// ProjectsByUser is the resolver for the projectsByUser field.
+func (r *queryResolver) ProjectsByUser(ctx context.Context, userID string, page *int, pageSize *int, sortBy *string, sortDirection *model.SortDirection) (*model.ProjectConnection, error) {
+	uID, err := strconv.ParseUint(userID, 10, 32)
+	if err != nil {
+		return nil, errors.New("invalid user ID")
 	}
-	return projects, nil
-}
 
-// Resume is the resolver for the resume field.
-func (r *queryResolver) Resume(ctx context.Context, id string) (*app.Resume, error) {
-	resumeID, err := strconv.ParseUint(id, 10, 64)
+	params := repositories.PaginationParams{
+		Page:     1,
+		PageSize: 10,
+	}
+
+	if page != nil && *page > 0 {
+		params.Page = *page
+	}
+	if pageSize != nil && *pageSize > 0 {
+		params.PageSize = *pageSize
+	}
+	if sortBy != nil {
+		params.SortBy = *sortBy
+	}
+	if sortDirection != nil && *sortDirection == model.SortDirectionDesc {
+		params.SortDesc = true
+	}
+
+	result, err := r.services.Project.ListProjectsByUser(ctx, uint(uID), params)
 	if err != nil {
 		return nil, err
 	}
-	var resume app.Resume
-	if err := r.db.First(&resume, resumeID).Error; err != nil {
+
+	// Convert to ProjectConnection
+	data := make([]*app.Project, len(result.Data))
+	for i, project := range result.Data {
+		data[i] = &project
+	}
+
+	return &model.ProjectConnection{
+		Data: data,
+		Pagination: &model.PaginationInfo{
+			Page:       result.Page,
+			TotalPages: result.TotalPages,
+			Total:      int(result.Total),
+			PageSize:   result.PageSize,
+		},
+	}, nil
+}
+
+// Blogs is the resolver for the blogs field.
+func (r *queryResolver) Blogs(ctx context.Context, page *int, pageSize *int, sortBy *string, sortDirection *model.SortDirection) (*model.BlogConnection, error) {
+	// Set defaults
+	pageNum := 1
+	if page != nil {
+		pageNum = *page
+	}
+	pageSizeNum := 10
+	if pageSize != nil {
+		pageSizeNum = *pageSize
+	}
+	sortByStr := "createdAt"
+	if sortBy != nil {
+		sortByStr = *sortBy
+	}
+
+	params := utils.ValidatePaginationParams(pageNum, pageSizeNum, sortByStr)
+	if sortDirection != nil && *sortDirection == model.SortDirectionAsc {
+		params.SortDesc = false
+	}
+
+	result, err := r.services.Blog.ListBlogs(ctx, params)
+	if err != nil {
+		return nil, utils.HandleRepositoryError(err, "blogs")
+	}
+
+	return &model.BlogConnection{
+		Data: utils.ToPointerSlice(result.Data),
+		Pagination: &model.PaginationInfo{
+			Page:       result.Page,
+			PageSize:   result.PageSize,
+			Total:      int(result.Total),
+			TotalPages: result.TotalPages,
+		},
+	}, nil
+}
+
+// Blog is the resolver for the blog field.
+func (r *queryResolver) Blog(ctx context.Context, id string) (*app.Blog, error) {
+	blogID, err := strconv.ParseUint(id, 10, 64)
+	if err != nil {
+		return nil, err
+	}
+	var blog app.Blog
+	if err := r.db.First(&blog, blogID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
 		return nil, err
 	}
-	return &resume, nil
+	return &blog, nil
 }
 
-// Resumes is the resolver for the resumes field.
-func (r *queryResolver) Resumes(ctx context.Context) ([]*app.Resume, error) {
-	var resumes []*app.Resume
-	if err := r.db.Find(&resumes).Error; err != nil {
-		return nil, err
-	}
-	return resumes, nil
-}
-
-// User is the resolver for the user field.
-func (r *queryResolver) User(ctx context.Context, id string) (*app.User, error) {
-	userID, err := strconv.ParseUint(id, 10, 64)
+// BlogBySlug is the resolver for the blogBySlug field.
+func (r *queryResolver) BlogBySlug(ctx context.Context, slug string) (*app.Blog, error) {
+	blog, err := r.services.Blog.GetBlogBySlug(ctx, slug)
 	if err != nil {
 		return nil, err
 	}
-	var user app.User
-	if err := r.db.First(&user, userID).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, nil
-		}
-		return nil, err
-	}
-	return &user, nil
+	return blog, nil
 }
 
-// Users is the resolver for the users field.
-func (r *queryResolver) Users(ctx context.Context) ([]*app.User, error) {
-	var users []*app.User
-	if err := r.db.Find(&users).Error; err != nil {
+// PublishedBlogs is the resolver for the publishedBlogs field.
+func (r *queryResolver) PublishedBlogs(ctx context.Context, page *int, pageSize *int, sortBy *string, sortDirection *model.SortDirection) (*model.BlogConnection, error) {
+	params := repositories.PaginationParams{
+		Page:     1,
+		PageSize: 10,
+	}
+
+	if page != nil && *page > 0 {
+		params.Page = *page
+	}
+	if pageSize != nil && *pageSize > 0 {
+		params.PageSize = *pageSize
+	}
+	if sortBy != nil {
+		params.SortBy = *sortBy
+	}
+	if sortDirection != nil && *sortDirection == model.SortDirectionDesc {
+		params.SortDesc = true
+	}
+
+	result, err := r.services.Blog.ListPublishedBlogs(ctx, params)
+	if err != nil {
 		return nil, err
 	}
-	return users, nil
+
+	// Convert to BlogConnection
+	data := make([]*app.Blog, len(result.Data))
+	for i, blog := range result.Data {
+		data[i] = &blog
+	}
+
+	return &model.BlogConnection{
+		Data: data,
+		Pagination: &model.PaginationInfo{
+			Page:       result.Page,
+			TotalPages: result.TotalPages,
+			Total:      int(result.Total),
+			PageSize:   result.PageSize,
+		},
+	}, nil
+}
+
+// BlogsByStatus is the resolver for the blogsByStatus field.
+func (r *queryResolver) BlogsByStatus(ctx context.Context, status app.BlogStatus, page *int, pageSize *int, sortBy *string, sortDirection *model.SortDirection) (*model.BlogConnection, error) {
+	params := repositories.PaginationParams{
+		Page:     1,
+		PageSize: 10,
+	}
+
+	if page != nil && *page > 0 {
+		params.Page = *page
+	}
+	if pageSize != nil && *pageSize > 0 {
+		params.PageSize = *pageSize
+	}
+	if sortBy != nil {
+		params.SortBy = *sortBy
+	}
+	if sortDirection != nil && *sortDirection == model.SortDirectionDesc {
+		params.SortDesc = true
+	}
+
+	result, err := r.services.Blog.ListBlogsByStatus(ctx, status, params)
+	if err != nil {
+		return nil, err
+	}
+
+	// Convert to BlogConnection
+	data := make([]*app.Blog, len(result.Data))
+	for i, blog := range result.Data {
+		data[i] = &blog
+	}
+
+	return &model.BlogConnection{
+		Data: data,
+		Pagination: &model.PaginationInfo{
+			Page:       result.Page,
+			TotalPages: result.TotalPages,
+			Total:      int(result.Total),
+			PageSize:   result.PageSize,
+		},
+	}, nil
 }
 
 // ID is the resolver for the id field.
-func (r *resumeResolver) ID(ctx context.Context, obj *app.Resume) (string, error) {
+func (r *resumeContentResolver) ID(ctx context.Context, obj *app.ResumeContent) (string, error) {
+	return strconv.FormatUint(uint64(obj.ID), 10), nil
+}
+
+// CategoryID is the resolver for the categoryId field.
+func (r *resumeContentResolver) CategoryID(ctx context.Context, obj *app.ResumeContent) (string, error) {
+	return strconv.FormatUint(uint64(obj.CategoryID), 10), nil
+}
+
+// CreatedAt is the resolver for the createdAt field.
+func (r *resumeContentResolver) CreatedAt(ctx context.Context, obj *app.ResumeContent) (string, error) {
+	return utils.FormatTime(obj.CreatedAt), nil
+}
+
+// UpdatedAt is the resolver for the updatedAt field.
+func (r *resumeContentResolver) UpdatedAt(ctx context.Context, obj *app.ResumeContent) (string, error) {
+	return utils.FormatTime(obj.UpdatedAt), nil
+}
+
+// ID is the resolver for the id field.
+func (r *userResolver) ID(ctx context.Context, obj *app.User) (string, error) {
 	return strconv.FormatUint(uint64(obj.ID), 10), nil
 }
 
@@ -360,22 +810,16 @@ func (r *userResolver) CreatedAt(ctx context.Context, obj *app.User) (string, er
 	return obj.CreatedAt.Format(time.RFC3339), nil
 }
 
-// ID is the resolver for the id field.
-func (r *userResolver) ID(ctx context.Context, obj *app.User) (string, error) {
-	return strconv.FormatUint(uint64(obj.ID), 10), nil
-}
-
-// Projects is the resolver for the projects field.
-func (r *userResolver) Projects(ctx context.Context, obj *app.User) ([]*app.Project, error) {
-	var projects []*app.Project
-	if err := r.db.Where("user_id = ?", obj.ID).Find(&projects).Error; err != nil {
-		return nil, err
-	}
-	return projects, nil
+// UpdatedAt is the resolver for the updatedAt field.
+func (r *userResolver) UpdatedAt(ctx context.Context, obj *app.User) (string, error) {
+	return obj.UpdatedAt.Format(time.RFC3339), nil
 }
 
 // Blog returns generated.BlogResolver implementation.
 func (r *Resolver) Blog() generated.BlogResolver { return &blogResolver{r} }
+
+// Category returns generated.CategoryResolver implementation.
+func (r *Resolver) Category() generated.CategoryResolver { return &categoryResolver{r} }
 
 // Mutation returns generated.MutationResolver implementation.
 func (r *Resolver) Mutation() generated.MutationResolver { return &mutationResolver{r} }
@@ -386,15 +830,16 @@ func (r *Resolver) Project() generated.ProjectResolver { return &projectResolver
 // Query returns generated.QueryResolver implementation.
 func (r *Resolver) Query() generated.QueryResolver { return &queryResolver{r} }
 
-// Resume returns generated.ResumeResolver implementation.
-func (r *Resolver) Resume() generated.ResumeResolver { return &resumeResolver{r} }
+// ResumeContent returns generated.ResumeContentResolver implementation.
+func (r *Resolver) ResumeContent() generated.ResumeContentResolver { return &resumeContentResolver{r} }
 
 // User returns generated.UserResolver implementation.
 func (r *Resolver) User() generated.UserResolver { return &userResolver{r} }
 
 type blogResolver struct{ *Resolver }
+type categoryResolver struct{ *Resolver }
 type mutationResolver struct{ *Resolver }
 type projectResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
-type resumeResolver struct{ *Resolver }
+type resumeContentResolver struct{ *Resolver }
 type userResolver struct{ *Resolver }

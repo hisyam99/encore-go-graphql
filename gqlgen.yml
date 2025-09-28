@@ -61,3 +61,21 @@ models:
       - github.com/99designs/gqlgen/graphql.Int
       - github.com/99designs/gqlgen/graphql.Int64
       - github.com/99designs/gqlgen/graphql.Int32
+  User:
+    model: 
+      - encore.app/app.User
+  Category:
+    model:
+      - encore.app/app.Category
+  ResumeContent:
+    model:
+      - encore.app/app.ResumeContent
+  Project:
+    model:
+      - encore.app/app.Project
+  Blog:
+    model:
+      - encore.app/app.Blog
+  BlogStatus:
+    model:
+      - encore.app/app.BlogStatus

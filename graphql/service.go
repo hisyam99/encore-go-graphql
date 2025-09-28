@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"encore.app/app" // Import app package to access Service
+	"encore.app/app/services"
 	"encore.app/graphql/generated"
 	"encore.dev"
 	"github.com/99designs/gqlgen/graphql/handler"
@@ -28,8 +29,11 @@ func initService() (*Service, error) {
 	// Use appService's db
 	db := appService.DB()
 
-	// Create config with Resolver that uses db
-	cfg := generated.Config{Resolvers: &Resolver{db: db}}
+	// Initialize services
+	appServices := services.NewServices(db)
+
+	// Create config with Resolver that uses db and services
+	cfg := generated.Config{Resolvers: &Resolver{db: db, services: appServices}}
 	srv := handler.NewDefaultServer(generated.NewExecutableSchema(cfg))
 
 	pg := playground.Handler("GraphQL Playground", "/graphql")

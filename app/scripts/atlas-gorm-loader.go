@@ -12,9 +12,10 @@ import (
 // Define the models to generate migrations for.
 var models = []any{
 	&app.User{},
+	&app.Category{},
+	&app.ResumeContent{},
 	&app.Project{},
 	&app.Blog{},
-	&app.Resume{},
 }
 
 func main() {

@@ -2,21 +2,52 @@
 
 package model
 
+import (
+	"bytes"
+	"fmt"
+	"io"
+	"strconv"
+
+	"encore.app/app"
+)
+
+type BlogConnection struct {
+	Data       []*app.Blog     `json:"data"`
+	Pagination *PaginationInfo `json:"pagination"`
+}
+
+type CategoryConnection struct {
+	Data       []*app.Category `json:"data"`
+	Pagination *PaginationInfo `json:"pagination"`
+}
+
 type CreateBlogInput struct {
-	Title   string `json:"title"`
-	Content string `json:"content"`
+	Title           string          `json:"title"`
+	Content         string          `json:"content"`
+	Summary         *string         `json:"summary,omitempty"`
+	Slug            string          `json:"slug"`
+	Author          *string         `json:"author,omitempty"`
+	Status          *app.BlogStatus `json:"status,omitempty"`
+	Tags            []string        `json:"tags,omitempty"`
+	MetaDescription *string         `json:"metaDescription,omitempty"`
+}
+
+type CreateCategoryInput struct {
+	Name        string  `json:"name"`
+	Description *string `json:"description,omitempty"`
 }
 
 type CreateProjectInput struct {
-	Title       string `json:"title"`
-	Description string `json:"description"`
-	UserID      string `json:"userID"`
+	Title       string  `json:"title"`
+	Description *string `json:"description,omitempty"`
+	UserID      *string `json:"userId,omitempty"`
 }
 
-type CreateResumeInput struct {
-	Title       string `json:"title"`
-	Description string `json:"description"`
-	Category    string `json:"category"`
+type CreateResumeContentInput struct {
+	Title       string  `json:"title"`
+	Description *string `json:"description,omitempty"`
+	Detail      *string `json:"detail,omitempty"`
+	CategoryID  string  `json:"categoryId"`
 }
 
 type CreateUserInput struct {
@@ -27,27 +58,116 @@ type CreateUserInput struct {
 type Mutation struct {
 }
 
+type PaginationInfo struct {
+	Page       int `json:"page"`
+	PageSize   int `json:"pageSize"`
+	Total      int `json:"total"`
+	TotalPages int `json:"totalPages"`
+}
+
+type ProjectConnection struct {
+	Data       []*app.Project  `json:"data"`
+	Pagination *PaginationInfo `json:"pagination"`
+}
+
 type Query struct {
 }
 
+type ResumeContentConnection struct {
+	Data       []*app.ResumeContent `json:"data"`
+	Pagination *PaginationInfo      `json:"pagination"`
+}
+
 type UpdateBlogInput struct {
-	Title   *string `json:"title,omitempty"`
-	Content *string `json:"content,omitempty"`
+	Title           *string         `json:"title,omitempty"`
+	Content         *string         `json:"content,omitempty"`
+	Summary         *string         `json:"summary,omitempty"`
+	Slug            *string         `json:"slug,omitempty"`
+	Author          *string         `json:"author,omitempty"`
+	Status          *app.BlogStatus `json:"status,omitempty"`
+	Tags            []string        `json:"tags,omitempty"`
+	MetaDescription *string         `json:"metaDescription,omitempty"`
+}
+
+type UpdateCategoryInput struct {
+	Name        *string `json:"name,omitempty"`
+	Description *string `json:"description,omitempty"`
 }
 
 type UpdateProjectInput struct {
 	Title       *string `json:"title,omitempty"`
 	Description *string `json:"description,omitempty"`
-	UserID      *string `json:"userID,omitempty"`
+	UserID      *string `json:"userId,omitempty"`
 }
 
-type UpdateResumeInput struct {
+type UpdateResumeContentInput struct {
 	Title       *string `json:"title,omitempty"`
 	Description *string `json:"description,omitempty"`
-	Category    *string `json:"category,omitempty"`
+	Detail      *string `json:"detail,omitempty"`
+	CategoryID  *string `json:"categoryId,omitempty"`
 }
 
 type UpdateUserInput struct {
 	Name  *string `json:"name,omitempty"`
 	Email *string `json:"email,omitempty"`
+}
+
+type UserConnection struct {
+	Data       []*app.User     `json:"data"`
+	Pagination *PaginationInfo `json:"pagination"`
+}
+
+type SortDirection string
+
+const (
+	SortDirectionAsc  SortDirection = "ASC"
+	SortDirectionDesc SortDirection = "DESC"
+)
+
+var AllSortDirection = []SortDirection{
+	SortDirectionAsc,
+	SortDirectionDesc,
+}
+
+func (e SortDirection) IsValid() bool {
+	switch e {
+	case SortDirectionAsc, SortDirectionDesc:
+		return true
+	}
+	return false
+}
+
+func (e SortDirection) String() string {
+	return string(e)
+}
+
+func (e *SortDirection) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = SortDirection(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid SortDirection", str)
+	}
+	return nil
+}
+
+func (e SortDirection) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *SortDirection) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e SortDirection) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
 }
