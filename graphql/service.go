@@ -42,6 +42,8 @@ func initService() (*Service, error) {
 	return &Service{srv: srv, playground: pg}, nil
 }
 
+var _ = initService
+
 //encore:api public raw path=/graphql
 func (s *Service) Query(w http.ResponseWriter, req *http.Request) {
 	// Extract Authorization header and put it in context
