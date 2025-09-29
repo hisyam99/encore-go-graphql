@@ -7,7 +7,6 @@ package graphql
 import (
 	"context"
 	"errors"
-	"fmt"
 	"strconv"
 	"time"
 
@@ -273,78 +272,66 @@ func (r *mutationResolver) DeleteUser(ctx context.Context, id string) (bool, err
 
 // CreateCategory is the resolver for the createCategory field.
 func (r *mutationResolver) CreateCategory(ctx context.Context, input model.CreateCategoryInput) (*app.Category, error) {
-	// Get auth token from headers
-	authHeader := utils.GetAuthHeaderFromContext(ctx)
-	claims, err := middleware.RequireAuth(ctx, authHeader)
+	// Require admin authentication
+	_, err := RequireAuthWithRole(ctx, app.UserRoleAdmin)
 	if err != nil {
 		return nil, err
 	}
 
-	// Require admin role for category management
-	if err := middleware.RequireRole(claims, app.UserRoleAdmin); err != nil {
-		return nil, err
-	}
+	// Extract optional description
+	description := ExtractOptionalString(input.Description)
 
-	description := ""
-	if input.Description != nil {
-		description = *input.Description
-	}
+	// Create category
 	category, err := r.services.Category.CreateCategory(ctx, input.Name, description)
 	if err != nil {
 		return nil, err
 	}
+
 	return category, nil
 }
 
 // UpdateCategory is the resolver for the updateCategory field.
 func (r *mutationResolver) UpdateCategory(ctx context.Context, id string, input model.UpdateCategoryInput) (*app.Category, error) {
-	// Get auth token from headers
-	authHeader := utils.GetAuthHeaderFromContext(ctx)
-	claims, err := middleware.RequireAuth(ctx, authHeader)
+	// Require admin authentication
+	_, err := RequireAuthWithRole(ctx, app.UserRoleAdmin)
 	if err != nil {
 		return nil, err
 	}
 
-	// Require admin role for category management
-	if err := middleware.RequireRole(claims, app.UserRoleAdmin); err != nil {
-		return nil, err
-	}
-
-	categoryID, err := strconv.ParseUint(id, 10, 32)
-	if err != nil {
-		return nil, errors.New("invalid category ID")
-	}
-
-	category, err := r.services.Category.UpdateCategory(ctx, uint(categoryID), input.Name, input.Description)
+	// Parse category ID
+	categoryID, err := utils.ParseID(id)
 	if err != nil {
 		return nil, err
 	}
+
+	// Update category
+	category, err := r.services.Category.UpdateCategory(ctx, categoryID, input.Name, input.Description)
+	if err != nil {
+		return nil, err
+	}
+
 	return category, nil
 }
 
 // DeleteCategory is the resolver for the deleteCategory field.
 func (r *mutationResolver) DeleteCategory(ctx context.Context, id string) (bool, error) {
-	// Get auth token from headers
-	authHeader := utils.GetAuthHeaderFromContext(ctx)
-	claims, err := middleware.RequireAuth(ctx, authHeader)
+	// Require admin authentication
+	_, err := RequireAuthWithRole(ctx, app.UserRoleAdmin)
 	if err != nil {
 		return false, err
 	}
 
-	// Require admin role for category management
-	if err := middleware.RequireRole(claims, app.UserRoleAdmin); err != nil {
-		return false, err
-	}
-
-	categoryID, err := strconv.ParseUint(id, 10, 32)
-	if err != nil {
-		return false, errors.New("invalid category ID")
-	}
-
-	err = r.services.Category.DeleteCategory(ctx, uint(categoryID))
+	// Parse category ID
+	categoryID, err := utils.ParseID(id)
 	if err != nil {
 		return false, err
 	}
+
+	// Delete category
+	if err := r.services.Category.DeleteCategory(ctx, categoryID); err != nil {
+		return false, err
+	}
+
 	return true, nil
 }
 
@@ -412,56 +399,60 @@ func (r *mutationResolver) DeleteResumeContent(ctx context.Context, id string) (
 
 // CreateProject is the resolver for the createProject field.
 func (r *mutationResolver) CreateProject(ctx context.Context, input model.CreateProjectInput) (*app.Project, error) {
-	// Get auth token from headers
-	authHeader := utils.GetAuthHeaderFromContext(ctx)
-	claims, err := middleware.RequireAuth(ctx, authHeader)
+	// Require editor authentication
+	authResult, err := RequireAuthWithRole(ctx, app.UserRoleEditor)
 	if err != nil {
 		return nil, err
 	}
 
-	// Require at least EDITOR role
-	if err := middleware.RequireRole(claims, app.UserRoleEditor); err != nil {
+	// Determine target user ID with permission check
+	userID, err := r.determineProjectUserID(input.UserID, authResult)
+	if err != nil {
 		return nil, err
 	}
 
-	// Use authenticated user's ID if not specified or not admin
-	var userID *uint
-	if input.UserID != nil {
-		parsed, err := utils.ParseID(*input.UserID)
-		if err != nil {
-			return nil, err
-		}
-		
-		// Only admin can create projects for other users
-		if claims.Role != app.UserRoleAdmin && parsed != claims.UserID {
-			return nil, errors.New("insufficient permissions to create project for another user")
-		}
-		
-		userID = &parsed
-	} else {
-		// Default to current user
-		userID = &claims.UserID
-	}
+	// Extract optional description
+	description := ExtractOptionalString(input.Description)
 
-	description := ""
-	if input.Description != nil {
-		description = *input.Description
-	}
-
+	// Create project
 	project, err := r.services.Project.CreateProject(ctx, input.Title, description, userID)
 	if err != nil {
 		return nil, utils.HandleRepositoryError(err, "project")
 	}
+
 	return project, nil
+}
+
+// determineProjectUserID determines the user ID for project with permission checks
+func (r *mutationResolver) determineProjectUserID(inputUserID *string, authResult *AuthResult) (*uint, error) {
+	if inputUserID == nil {
+		// Default to current user
+		return &authResult.UserID, nil
+	}
+
+	// Parse requested user ID
+	parsed, err := utils.ParseID(*inputUserID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Only admin can create projects for other users
+	if authResult.Claims.Role != app.UserRoleAdmin && parsed != authResult.UserID {
+		return nil, errors.New("insufficient permissions to create project for another user")
+	}
+
+	return &parsed, nil
 }
 
 // UpdateProject is the resolver for the updateProject field.
 func (r *mutationResolver) UpdateProject(ctx context.Context, id string, input model.UpdateProjectInput) (*app.Project, error) {
+	// Parse project ID
 	projectID, err := utils.ParseID(id)
 	if err != nil {
 		return nil, err
 	}
 
+	// Parse optional user ID
 	var userID *uint
 	if input.UserID != nil {
 		parsed, err := utils.ParseID(*input.UserID)
@@ -471,53 +462,41 @@ func (r *mutationResolver) UpdateProject(ctx context.Context, id string, input m
 		userID = &parsed
 	}
 
+	// Update project
 	project, err := r.services.Project.UpdateProject(ctx, projectID, input.Title, input.Description, userID)
 	if err != nil {
 		return nil, utils.HandleRepositoryError(err, "project")
 	}
+
 	return project, nil
 }
 
 // DeleteProject is the resolver for the deleteProject field.
 func (r *mutationResolver) DeleteProject(ctx context.Context, id string) (bool, error) {
-	projectID, err := strconv.ParseUint(id, 10, 64)
+	// Parse project ID
+	projectID, err := utils.ParseID(id)
 	if err != nil {
 		return false, err
 	}
-	if err := r.db.Delete(&app.Project{}, projectID).Error; err != nil {
+
+	// Delete project using service layer
+	if err := r.services.Project.DeleteProject(ctx, projectID); err != nil {
 		return false, err
 	}
+
 	return true, nil
 }
 
 // CreateBlog is the resolver for the createBlog field.
 func (r *mutationResolver) CreateBlog(ctx context.Context, input model.CreateBlogInput) (*app.Blog, error) {
-	// Get auth token from headers
-	authHeader := utils.GetAuthHeaderFromContext(ctx)
-	claims, err := middleware.RequireAuth(ctx, authHeader)
+	// Require editor authentication
+	authResult, err := RequireAuthWithRole(ctx, app.UserRoleEditor)
 	if err != nil {
 		return nil, err
 	}
 
-	// Require at least EDITOR role
-	if err := middleware.RequireRole(claims, app.UserRoleEditor); err != nil {
-		return nil, err
-	}
-
-	// Use authenticated user as author if not specified
-	author := ""
-	if input.Author != nil {
-		author = *input.Author
-	} else {
-		// Get current user info
-		authService := r.services.Auth
-		if authService != nil {
-			user, err := authService.GetCurrentUser(ctx, claims.UserID)
-			if err == nil {
-				author = user.Name
-			}
-		}
-	}
+	// Determine author
+	author := r.determineBlogAuthor(ctx, input.Author, authResult.UserID)
 
 	// Set default status if not provided
 	status := app.BlogStatusDraft
@@ -525,22 +504,12 @@ func (r *mutationResolver) CreateBlog(ctx context.Context, input model.CreateBlo
 		status = *input.Status
 	}
 
-	// Extract other fields
-	summary := ""
-	if input.Summary != nil {
-		summary = *input.Summary
-	}
+	// Extract optional fields
+	summary := ExtractOptionalString(input.Summary)
+	metaDescription := ExtractOptionalString(input.MetaDescription)
+	tags := ExtractOptionalStringSlice(input.Tags)
 
-	metaDescription := ""
-	if input.MetaDescription != nil {
-		metaDescription = *input.MetaDescription
-	}
-
-	tags := []string{}
-	if input.Tags != nil {
-		tags = input.Tags
-	}
-
+	// Create blog
 	blog, err := r.services.Blog.CreateBlog(ctx, input.Title, input.Content, summary, input.Slug, author, metaDescription, status, tags)
 	if err != nil {
 		return nil, err
@@ -549,37 +518,58 @@ func (r *mutationResolver) CreateBlog(ctx context.Context, input model.CreateBlo
 	return blog, nil
 }
 
+// determineBlogAuthor determines the author for a blog post
+func (r *mutationResolver) determineBlogAuthor(ctx context.Context, inputAuthor *string, userID uint) string {
+	if inputAuthor != nil {
+		return *inputAuthor
+	}
+
+	// Get current user info as fallback
+	if authService := r.services.Auth; authService != nil {
+		if user, err := authService.GetCurrentUser(ctx, userID); err == nil {
+			return user.Name
+		}
+	}
+
+	return ""
+}
+
 // UpdateBlog is the resolver for the updateBlog field.
 func (r *mutationResolver) UpdateBlog(ctx context.Context, id string, input model.UpdateBlogInput) (*app.Blog, error) {
-	blogID, err := strconv.ParseUint(id, 10, 64)
+	// Parse blog ID
+	blogID, err := utils.ParseID(id)
 	if err != nil {
 		return nil, err
 	}
-	var blog app.Blog
-	if err := r.db.First(&blog, blogID).Error; err != nil {
+
+	// Prepare tags pointer
+	var tags *[]string
+	if input.Tags != nil {
+		tags = &input.Tags
+	}
+
+	// Update blog using service layer
+	blog, err := r.services.Blog.UpdateBlog(ctx, blogID, input.Title, input.Content, input.Summary, input.Slug, input.Author, input.MetaDescription, input.Status, tags)
+	if err != nil {
 		return nil, err
 	}
-	if input.Title != nil {
-		blog.Title = *input.Title
-	}
-	if input.Content != nil {
-		blog.Content = *input.Content
-	}
-	if err := r.db.Save(&blog).Error; err != nil {
-		return nil, err
-	}
-	return &blog, nil
+
+	return blog, nil
 }
 
 // DeleteBlog is the resolver for the deleteBlog field.
 func (r *mutationResolver) DeleteBlog(ctx context.Context, id string) (bool, error) {
-	blogID, err := strconv.ParseUint(id, 10, 64)
+	// Parse blog ID
+	blogID, err := utils.ParseID(id)
 	if err != nil {
 		return false, err
 	}
-	if err := r.db.Delete(&app.Blog{}, blogID).Error; err != nil {
+
+	// Delete blog using service layer
+	if err := r.services.Blog.DeleteBlog(ctx, blogID); err != nil {
 		return false, err
 	}
+
 	return true, nil
 }
 
@@ -1111,7 +1101,7 @@ func (r *userResolver) ID(ctx context.Context, obj *app.User) (string, error) {
 
 // LastLogin is the resolver for the lastLogin field.
 func (r *userResolver) LastLogin(ctx context.Context, obj *app.User) (*string, error) {
-	panic(fmt.Errorf("not implemented: LastLogin - lastLogin"))
+	return utils.TimeToStringPtr(obj.LastLogin), nil
 }
 
 // CreatedAt is the resolver for the createdAt field.
