@@ -132,3 +132,14 @@ func (r *gormBlogRepository) ListByStatus(ctx context.Context, status app.BlogSt
 		TotalPages: totalPages,
 	}, nil
 }
+
+// FixBlogStatus normalizes existing blog statuses and sets published_at for published blogs
+func (r *gormBlogRepository) FixBlogStatus(ctx context.Context) error {
+	// Update status to lowercase
+	if err := r.db.WithContext(ctx).Exec("UPDATE blogs SET status = LOWER(status) WHERE status != LOWER(status)").Error; err != nil {
+		return err
+	}
+
+	// Set published_at for published blogs that don't have it set
+	return r.db.WithContext(ctx).Exec("UPDATE blogs SET published_at = COALESCE(published_at, updated_at) WHERE status = 'published' AND published_at IS NULL").Error
+}

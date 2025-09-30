@@ -73,4 +73,5 @@ type BlogRepository interface {
 	List(ctx context.Context, params PaginationParams) (*PaginatedResult[app.Blog], error)
 	ListPublished(ctx context.Context, params PaginationParams) (*PaginatedResult[app.Blog], error)
 	ListByStatus(ctx context.Context, status app.BlogStatus, params PaginationParams) (*PaginatedResult[app.Blog], error)
+	FixBlogStatus(ctx context.Context) error
 }

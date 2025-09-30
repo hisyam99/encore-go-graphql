@@ -3,12 +3,23 @@ package services
 import (
 	"context"
 	"errors"
+	"strings"
 
 	"encore.app/app"
 	"encore.app/app/repositories"
 	"encore.app/app/utils"
 	"gorm.io/gorm"
 )
+
+// normalizeBlogStatus normalizes blog status to lowercase to ensure consistency
+func normalizeBlogStatus(status app.BlogStatus) app.BlogStatus {
+	switch strings.ToLower(string(status)) {
+	case strings.ToLower(string(app.BlogStatusPublished)):
+		return app.BlogStatusPublished
+	default:
+		return app.BlogStatusDraft
+	}
+}
 
 // BlogService provides business logic for blog operations
 type BlogService struct {
@@ -65,6 +76,9 @@ func (s *BlogService) CreateBlog(ctx context.Context, title, content, summary, s
 	} else if !errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, err
 	}
+
+	// Normalize status to ensure consistency
+	status = normalizeBlogStatus(status)
 
 	// Create blog
 	blog := &app.Blog{
@@ -167,7 +181,7 @@ func (s *BlogService) UpdateBlog(ctx context.Context, id uint, title, content, s
 	}
 
 	if status != nil {
-		blog.Status = *status
+		blog.Status = normalizeBlogStatus(*status)
 	}
 
 	if tags != nil {
@@ -203,7 +217,12 @@ func (s *BlogService) ListPublishedBlogs(ctx context.Context, params repositorie
 
 // ListBlogsByStatus retrieves blogs by status with pagination
 func (s *BlogService) ListBlogsByStatus(ctx context.Context, status app.BlogStatus, params repositories.PaginationParams) (*repositories.PaginatedResult[app.Blog], error) {
-	return s.blogRepo.ListByStatus(ctx, status, params)
+	return s.blogRepo.ListByStatus(ctx, normalizeBlogStatus(status), params)
+}
+
+// FixBlogStatus normalizes existing blog statuses and sets published_at for published blogs
+func (s *BlogService) FixBlogStatus(ctx context.Context) error {
+	return s.blogRepo.FixBlogStatus(ctx)
 }
 
 // ProjectService provides business logic for project operations
