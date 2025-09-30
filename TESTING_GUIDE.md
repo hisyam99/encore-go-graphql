@@ -385,6 +385,39 @@ Use GraphQL Playground for:
 - Schema introspection
 - Auto-completion
 
+### 5. CORS Issues
+Test CORS configuration:
+
+```bash
+# Test CORS with curl
+curl -H "Origin: https://hisyam.tar.my.id" \
+     -H "Access-Control-Request-Method: POST" \
+     -H "Access-Control-Request-Headers: Content-Type" \
+     -X OPTIONS \
+     http://localhost:4001/graphql
+
+# Test CORS endpoint
+curl -H "Origin: https://hisyam.tar.my.id" \
+     http://localhost:4001/cors-test
+
+# Test from browser console (on https://hisyam.tar.my.id)
+fetch('http://localhost:4001/cors-test', {
+  method: 'GET',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+})
+.then(response => response.json())
+.then(data => console.log(data))
+.catch(error => console.error('CORS Error:', error));
+```
+
+Expected CORS headers in response:
+- `Access-Control-Allow-Origin: https://hisyam.tar.my.id`
+- `Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS`
+- `Access-Control-Allow-Headers: Accept, Authorization, Content-Type, X-CSRF-Token, X-Requested-With`
+- `Access-Control-Allow-Credentials: true`
+
 ## 📚 Additional Resources
 
 - **GraphQL Playground**: `http://localhost:4001/graphql`
