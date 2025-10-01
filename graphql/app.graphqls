@@ -40,29 +40,77 @@ type Query {
   me: User
 
   # User queries
-  users(page: Int = 1, pageSize: Int = 10, sortBy: String = "createdAt", sortDirection: SortDirection = DESC): UserConnection!
+  users(
+    page: Int = 1
+    pageSize: Int = 10
+    sortBy: String = "createdAt"
+    sortDirection: SortDirection = DESC
+  ): UserConnection!
   user(id: ID!): User
 
   # Category queries
-  categories(page: Int = 1, pageSize: Int = 10, sortBy: String = "name", sortDirection: SortDirection = ASC): CategoryConnection!
+  categories(
+    page: Int = 1
+    pageSize: Int = 10
+    sortBy: String = "name"
+    sortDirection: SortDirection = ASC
+  ): CategoryConnection!
   category(id: ID!): Category
 
   # Resume content queries
-  resumeContents(page: Int = 1, pageSize: Int = 10, sortBy: String = "createdAt", sortDirection: SortDirection = DESC): ResumeContentConnection!
+  resumeContents(
+    page: Int = 1
+    pageSize: Int = 10
+    sortBy: String = "createdAt"
+    sortDirection: SortDirection = DESC
+  ): ResumeContentConnection!
   resumeContent(id: ID!): ResumeContent
-  resumeContentsByCategory(categoryId: ID!, page: Int = 1, pageSize: Int = 10, sortBy: String = "createdAt", sortDirection: SortDirection = DESC): ResumeContentConnection!
+  resumeContentsByCategory(
+    categoryId: ID!
+    page: Int = 1
+    pageSize: Int = 10
+    sortBy: String = "createdAt"
+    sortDirection: SortDirection = DESC
+  ): ResumeContentConnection!
 
   # Project queries
-  projects(page: Int = 1, pageSize: Int = 10, sortBy: String = "createdAt", sortDirection: SortDirection = DESC): ProjectConnection!
+  projects(
+    page: Int = 1
+    pageSize: Int = 10
+    sortBy: String = "createdAt"
+    sortDirection: SortDirection = DESC
+  ): ProjectConnection!
   project(id: ID!): Project
-  projectsByUser(userId: ID!, page: Int = 1, pageSize: Int = 10, sortBy: String = "createdAt", sortDirection: SortDirection = DESC): ProjectConnection!
+  projectsByUser(
+    userId: ID!
+    page: Int = 1
+    pageSize: Int = 10
+    sortBy: String = "createdAt"
+    sortDirection: SortDirection = DESC
+  ): ProjectConnection!
 
   # Blog queries
-  blogs(page: Int = 1, pageSize: Int = 10, sortBy: String = "createdAt", sortDirection: SortDirection = DESC): BlogConnection!
+  blogs(
+    page: Int = 1
+    pageSize: Int = 10
+    sortBy: String = "createdAt"
+    sortDirection: SortDirection = DESC
+  ): BlogConnection!
   blog(id: ID!): Blog
   blogBySlug(slug: String!): Blog
-  publishedBlogs(page: Int = 1, pageSize: Int = 10, sortBy: String = "publishedAt", sortDirection: SortDirection = DESC): BlogConnection!
-  blogsByStatus(status: BlogStatus!, page: Int = 1, pageSize: Int = 10, sortBy: String = "createdAt", sortDirection: SortDirection = DESC): BlogConnection!
+  publishedBlogs(
+    page: Int = 1
+    pageSize: Int = 10
+    sortBy: String = "publishedAt"
+    sortDirection: SortDirection = DESC
+  ): BlogConnection!
+  blogsByStatus(
+    status: BlogStatus!
+    page: Int = 1
+    pageSize: Int = 10
+    sortBy: String = "createdAt"
+    sortDirection: SortDirection = DESC
+  ): BlogConnection!
 }
 
 type Mutation {
