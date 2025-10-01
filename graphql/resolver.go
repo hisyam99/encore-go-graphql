@@ -1,6 +1,7 @@
 package graphql
 
 import (
+	"encore.app/app/dataloader"
 	"encore.app/app/services"
 	"gorm.io/gorm"
 )
@@ -10,6 +11,7 @@ import (
 // It serves as dependency injection for your app, add any dependencies you require here.
 
 type Resolver struct {
-	db       *gorm.DB
-	services *services.Services
+	db          *gorm.DB
+	services    *services.Services
+	dataLoaders *dataloader.DataLoaders
 }

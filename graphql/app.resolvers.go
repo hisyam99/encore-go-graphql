@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"encore.app/app"
+	"encore.app/app/dataloader"
 	"encore.app/app/middleware"
 	"encore.app/app/repositories"
 	"encore.app/app/services"
@@ -1134,6 +1135,68 @@ func (r *Resolver) ResumeContent() generated.ResumeContentResolver { return &res
 
 // User returns generated.UserResolver implementation.
 func (r *Resolver) User() generated.UserResolver { return &userResolver{r} }
+
+// ResumeContents resolver for Category (prevents N+1)
+func (r *categoryResolver) ResumeContents(ctx context.Context, obj *app.Category) ([]*app.ResumeContent, error) {
+	loaders := dataloader.DataLoadersFromContext(ctx)
+	if loaders == nil {
+		// Fallback to direct query if DataLoader not available
+		var resumeContents []*app.ResumeContent
+		err := r.db.Where("category_id = ?", obj.ID).Find(&resumeContents).Error
+		return resumeContents, err
+	}
+
+	return loaders.CategoryResumeContentLoader.Load(ctx, obj.ID)()
+}
+
+// Projects resolver for User (prevents N+1)
+func (r *userResolver) Projects(ctx context.Context, obj *app.User) ([]*app.Project, error) {
+	loaders := dataloader.DataLoadersFromContext(ctx)
+	if loaders == nil {
+		// Fallback to direct query if DataLoader not available
+		var projects []*app.Project
+		err := r.db.Where("user_id = ?", obj.ID).Find(&projects).Error
+		return projects, err
+	}
+
+	return loaders.UserProjectLoader.Load(ctx, obj.ID)()
+}
+
+// Category resolver for ResumeContent (prevents N+1)
+func (r *resumeContentResolver) Category(ctx context.Context, obj *app.ResumeContent) (*app.Category, error) {
+	loaders := dataloader.DataLoadersFromContext(ctx)
+	if loaders == nil {
+		// Fallback to direct query if DataLoader not available
+		var category app.Category
+		err := r.db.Where("id = ?", obj.CategoryID).First(&category).Error
+		if err != nil {
+			return nil, err
+		}
+		return &category, nil
+	}
+
+	return loaders.ResumeContentCategoryLoader.Load(ctx, obj.CategoryID)()
+}
+
+// User resolver for Project (prevents N+1)
+func (r *projectResolver) User(ctx context.Context, obj *app.Project) (*app.User, error) {
+	if obj.UserID == nil {
+		return nil, nil
+	}
+
+	loaders := dataloader.DataLoadersFromContext(ctx)
+	if loaders == nil {
+		// Fallback to direct query if DataLoader not available
+		var user app.User
+		err := r.db.Where("id = ?", *obj.UserID).First(&user).Error
+		if err != nil {
+			return nil, err
+		}
+		return &user, nil
+	}
+
+	return loaders.ProjectUserLoader.Load(ctx, *obj.UserID)()
+}
 
 type blogResolver struct{ *Resolver }
 type categoryResolver struct{ *Resolver }

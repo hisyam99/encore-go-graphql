@@ -6,6 +6,7 @@ require (
 	encore.dev v1.48.13
 	github.com/99designs/gqlgen v0.17.81
 	github.com/golang-jwt/jwt/v5 v5.2.0
+	github.com/graph-gophers/dataloader/v7 v7.1.2
 	github.com/vektah/gqlparser/v2 v2.5.30
 )
 

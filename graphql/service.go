@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"encore.app/app" // Import app package to access Service
+	"encore.app/app/dataloader"
 	"encore.app/app/services"
 	"encore.app/app/utils"
 	"encore.app/graphql/generated"
@@ -34,8 +35,15 @@ func initService() (*Service, error) {
 	// Initialize services
 	appServices := services.NewServices(db)
 
-	// Create config with Resolver that uses db and services
-	cfg := generated.Config{Resolvers: &Resolver{db: db, services: appServices}}
+	// Initialize DataLoaders
+	dataLoaders := dataloader.NewDataLoaders(db)
+
+	// Create config with Resolver that uses db, services, and dataLoaders
+	cfg := generated.Config{Resolvers: &Resolver{
+		db:          db,
+		services:    appServices,
+		dataLoaders: dataLoaders,
+	}}
 	srv := handler.NewDefaultServer(generated.NewExecutableSchema(cfg))
 
 	pg := playground.Handler("GraphQL Playground", "/graphql")
@@ -49,6 +57,17 @@ func (s *Service) Query(w http.ResponseWriter, req *http.Request) {
 	// Extract Authorization header and put it in context
 	authHeader := req.Header.Get("Authorization")
 	ctx := context.WithValue(req.Context(), utils.AuthHeaderKey, authHeader)
+
+	// Initialize app service to get database connection for DataLoaders
+	appService, err := app.New()
+	if err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	// Add DataLoaders to context
+	dataLoaders := dataloader.NewDataLoaders(appService.DB())
+	ctx = dataloader.ContextWithDataLoaders(ctx, dataLoaders)
 	req = req.WithContext(ctx)
 
 	// Serve GraphQL with the updated context
